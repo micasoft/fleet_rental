@@ -21,10 +21,10 @@
 #############################################################################
 from . import account_move
 from . import account_move_line
-from . import car_rental_checklist
 from . import car_rental_contract
-from . import car_tools
-from . import fleet_rental_line
+from . import car_rental_tools
+from . import car_rental_line
+from . import car_rental_checklist
+from . import car_rental_reserved
 from . import fleet_vehicle
-from . import rental_fleet_reserved
 from . import res_config_settings

@@ -7,7 +7,6 @@
         <field name="inherit_id" ref="fleet.fleet_vehicle_view_form"/>
         <field name="arch" type="xml">
             <field name="car_value" position="after">
-                <field name="rental_check_availability" invisible="1"/>
                 <field name="rental_reserved_time" invisible="1"/>
             </field>
             <field name="color" position="replace">
@@ -84,7 +83,7 @@
                             <field name="end_time" widget="timepicker_time" invisible="rent_by_hour == False"
                                    readonly="(state != 'draft') and (read_only == False)" required="rent_by_hour == True"/>
                             <field name="vehicle_id"
-                                   domain="[('rental_check_availability','=',True),('state_id.name','!=','Inactive')]"
+                                   domain="[('state_id.name','!=','Inactive')]"
                                    readonly="state != 'draft'"
                                    options="{'no_create': True}"/>
                             <field name="journal_type" invisible="1"/>

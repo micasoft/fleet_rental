@@ -19,12 +19,20 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from odoo import fields, models
+from odoo import models, fields
 
 
-class CarTools(models.Model):
-    """Model to add the tools for the car"""
-    _name = 'car.tools'
+class CarRentalReserved(models.Model):
+    _name = "car.rental.reserved"
+    _description = "Reserved Time"
 
-    name = fields.Char(string="Name", help='Name of the car tool')
-    price = fields.Float(string="Price", help='Price of the car tool')
+    customer_id = fields.Many2one('res.partner',
+                                  string='Customer',
+                                  help='Select customer')
+    date_from = fields.Datetime(string='Reserved Date From',
+                            help='Select the start date of rental ')
+    date_to = fields.Datetime(string='Reserved Date To',
+                          help='Select the end date of rental')
+    reserved_obj_id = fields.Many2one('fleet.vehicle',
+                                      string='Reserved Object',
+                                      help='Reserved Object')

@@ -22,8 +22,8 @@
 from odoo import fields, models
 
 
-class FleetRentalLine(models.Model):
-    _name = 'fleet.rental.line'
+class CarRentalLine(models.Model):
+    _name = 'car.rental.line'
 
     name = fields.Char(string='Description', help='Name')
     date_today = fields.Date(string='Date', help='Today date')

@@ -26,15 +26,15 @@ class EmployeeFleet(models.Model):
     """Inherit fleet.vehicle"""
     _inherit = 'fleet.vehicle'
 
-    rental_check_availability = fields.Boolean(default=True, copy=False)
     color = fields.Char(string='Color', default='#FFFFFF')
-    rental_reserved_time = fields.One2many('rental.fleet.reserved',
+    rental_reserved_time = fields.One2many('car.rental.reserved',
                                            'reserved_obj_id',
                                            string='Reserved Time',
                                            help='Reserved rental time',
-                                           readonly=1,
-                                           ondelete='cascade')
-    fuel_type = fields.Selection([('gasoline', 'Gasoline'),
+                                           ondelete='cascade',
+                                           readonly=True)
+    
+    fuel_type = fields.Selection(selection_add=[('gasoline', 'Gasoline'),
                                   ('diesel', 'Diesel'),
                                   ('electric', 'Electric'),
                                   ('hybrid', 'Hybrid'),

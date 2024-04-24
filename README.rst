@@ -4,8 +4,7 @@
 
 Fleet Rental Management
 =======================
-* This module will helps you to give the vehicles for Rent.
-
+This module will helps you to give the vehicles for Rent.
 
 The intention of this fork is to evolve the existing addon to a different set of features.
 

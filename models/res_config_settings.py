@@ -37,3 +37,8 @@ class ResConfigSettings(models.TransientModel):
         string="Product",
         config_parameter='fleet_service_product_id',
         default=_get_default_product)
+
+    fleet_rental_send_booking = fields.Boolean (
+        string="Booking reserved",
+        config_parameter='fleet_rental_send_booking',
+        help="Enable to send a e-mail when the booking is reserved")

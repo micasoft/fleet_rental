@@ -26,7 +26,7 @@ class CarRentalChecklist(models.Model):
     """Model to add the checklist of rental"""
     _name = 'car.rental.checklist'
 
-    name = fields.Many2one('car.tools', string="Name",
+    name = fields.Many2one('car.rental.tools', string="Name",
                            help='Select car tools')
     checklist_active = fields.Boolean(string="Available",
                                       default=True,

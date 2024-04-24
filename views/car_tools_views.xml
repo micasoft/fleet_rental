@@ -2,8 +2,8 @@
 <odoo>
 <!--    Car tools form view-->
     <record id="car_tools_view_form" model="ir.ui.view">
-        <field name="name">car.tools.view.form</field>
-        <field name="model">car.tools</field>
+        <field name="name">car.rental.tools.view.form</field>
+        <field name="model">car.rental.tools</field>
         <field name="type">form</field>
         <field name="arch" type="xml">
             <form string="Accessories/Tools">
@@ -22,8 +22,8 @@
     </record>
 <!--    Car tools tree view-->
     <record id="car_tools_view_tree" model="ir.ui.view">
-        <field name="name">car.tools.view.tree</field>
-        <field name="model">car.tools</field>
+        <field name="name">car.rental.tools.view.tree</field>
+        <field name="model">car.rental.tools</field>
         <field name="type">tree</field>
         <field name="arch" type="xml">
             <tree string="Accessories/Tools">
@@ -35,7 +35,7 @@
 <!--    Action for car tools-->
     <record id="action_fleet_car_tools" model="ir.actions.act_window">
         <field name="name">Accessories/Tools</field>
-        <field name="res_model">car.tools</field>
+        <field name="res_model">car.rental.tools</field>
         <field name="view_mode">tree,form</field>
     </record>
 

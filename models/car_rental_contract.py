@@ -23,6 +23,9 @@ from datetime import datetime, date, timedelta
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class CarRentalContract(models.Model):
     _name = 'car.rental.contract'
@@ -31,7 +34,8 @@ class CarRentalContract(models.Model):
 
     image = fields.Binary(related='vehicle_id.image_128',
                           string="Image of Vehicle")
-    reserved_fleet_id = fields.Many2one('rental.fleet.reserved',
+    
+    reserved_fleet_id = fields.Many2one('car.rental.reserved',
                                         invisible=True,
                                         copy=False)
     name = fields.Char(string="Name",
@@ -73,7 +77,8 @@ class CarRentalContract(models.Model):
                            help="Enter the contract Ending hour")
     rent_by_hour = fields.Boolean(string="Rent By Hour",
                                   help="Enable to start contract on "
-                                       "hour basis")
+                                       "hour basis",
+                                  default=True)
     rent_end_date = fields.Date(string="Rent End Date",
                                 required=True,
                                 help="End date of contract",
@@ -100,7 +105,7 @@ class CarRentalContract(models.Model):
                                    default=lambda self: self.env[
                                        'account.account'].search(
                                        [('id', '=', 17)]))
-    recurring_line = fields.One2many('fleet.rental.line', 'rental_number',
+    recurring_line = fields.One2many('car.rental.line', 'rental_number',
                                      readonly=True, help="Recurring Invoices",
                                      copy=False)
     first_payment = fields.Float(string='First Payment',
@@ -114,7 +119,7 @@ class CarRentalContract(models.Model):
     first_invoice_created = fields.Boolean(string="First Invoice Created",
                                            invisible=True, copy=False)
     attachment_ids = fields.Many2many('ir.attachment',
-                                      'car_rent_checklist_ir_attachments_rel',
+                                      'car_rental_checklist_ir_attachments_rel',
                                       'rental_id', 'attachment_id',
                                       string="Attachments",
                                       help="Images of the vehicle before "
@@ -243,19 +248,25 @@ class CarRentalContract(models.Model):
             invoices, managing recurring data, and sending email notifications.
         """
         inv_obj = self.env['account.move']
-        recurring_obj = self.env['fleet.rental.line']
+        recurring_obj = self.env['car.rental.line']
         supplier = self.customer_id
-        product_id = self.env['product.product'].browse(
-            self.env.ref('fleet_rental.fleet_service_product').id)
-        if product_id.property_account_income_id.id:
-            income_account = product_id.property_account_income_id
-        elif product_id.categ_id.property_account_income_categ_id.id:
-            income_account = product_id.categ_id.property_account_income_categ_id
+
+        self.env['ir.config_parameter'].sudo().get_param(
+                'fleet_rental_send_booking')
+        
+
+        product = self.env['product.product'].search(
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+            limit=1)
+        if product.property_account_income_id.id:
+            income_account = product.property_account_income_id
+        elif product.categ_id.property_account_income_categ_id.id:
+            income_account = product.categ_id.property_account_income_categ_id
         else:
             raise UserError(
                 _('Please define income account for this product: "%s" (id:%d).') % (
-                    product_id.name,
-                    product_id.id))
+                    product.name,
+                    product.id))
         inv_data = {
             'ref': supplier.name,
             'partner_id': supplier.id,
@@ -269,7 +280,7 @@ class CarRentalContract(models.Model):
                 'account_id': income_account.id,
                 'price_unit': self.cost_generated,
                 'quantity': 1,
-                'product_id': product_id.id,
+                'product_id': product.id,
             })]
         }
         inv_id = inv_obj.create(inv_data)
@@ -314,7 +325,7 @@ class CarRentalContract(models.Model):
             managing recurring data, and sending email notifications.
         """
         inv_obj = self.env['account.move']
-        recurring_obj = self.env['fleet.rental.line']
+        recurring_obj = self.env['car.rental.line']
         today = date.today()
         for records in self.search([]):
             start_date = datetime.strptime(str(records.rent_start_date),
@@ -338,17 +349,18 @@ class CarRentalContract(models.Model):
                         temp = 1
                 if temp == 1 and records.cost_frequency != "no" and records.state == "running":
                     supplier = records.customer_id
-                    product_id = self.env['product.product'].browse(
-                        self.env.ref('fleet_rental.fleet_service_product').id)
-                    if product_id.property_account_income_id.id:
-                        income_account = product_id.property_account_income_id
-                    elif product_id.categ_id.property_account_income_categ_id.id:
-                        income_account = product_id.categ_id.property_account_income_categ_id
+                    product = self.env['product.product'].search(
+                        [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+                        limit=1)
+                    if product.property_account_income_id.id:
+                        income_account = product.property_account_income_id
+                    elif product.categ_id.property_account_income_categ_id.id:
+                        income_account = product.categ_id.property_account_income_categ_id
                     else:
                         raise UserError(
                             _('Please define income account for this product: "%s" (id:%d).') % (
-                                product_id.name,
-                                product_id.id))
+                                product.name,
+                                product.id))
                     inv_data = {
                         'ref': supplier.name,
                         'partner_id': supplier.id,
@@ -365,7 +377,7 @@ class CarRentalContract(models.Model):
                             'account_id': income_account.id,
                             'price_unit': records.cost_generated,
                             'quantity': 1,
-                            'product_id': product_id.id,
+                            'product_id': product.id,
                         })]
                     }
                     inv_id = inv_obj.create(inv_data)
@@ -414,18 +426,19 @@ class CarRentalContract(models.Model):
         self.state = "invoice"
         self.reserved_fleet_id.unlink()
         self.rent_end_date = fields.Date.today()
-        self.vehicle_id.rental_check_availability = True
-        product_id = self.env['product.product'].browse(
-            self.env.ref('fleet_rental.fleet_service_product').id)
-        if product_id.property_account_income_id.id:
-            income_account = product_id.property_account_income_id
-        elif product_id.categ_id.property_account_income_categ_id.id:
-            income_account = product_id.categ_id.property_account_income_categ_id
+#        self.vehicle_id.rental_check_availability = True
+        product = self.env['product.product'].search(
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+            limit=1)
+        if product.property_account_income_id.id:
+            income_account = product.property_account_income_id
+        elif product.categ_id.property_account_income_categ_id.id:
+            income_account = product.categ_id.property_account_income_categ_id
         else:
             raise UserError(
                 _('Please define income account for this product: "%s" (id:%d).') % (
-                    product_id.name,
-                    product_id.id))
+                    product.name,
+                    product.id))
         if self.total_cost != 0:
             supplier = self.customer_id
             inv_data = {
@@ -443,7 +456,7 @@ class CarRentalContract(models.Model):
                     'account_id': income_account.id,
                     'price_unit': self.total_cost,
                     'quantity': 1,
-                    'product_id': product_id.id,
+                    'product_id': product.id,
                 })]
             }
             inv_id = self.env['account.move'].create(inv_data)
@@ -469,25 +482,33 @@ class CarRentalContract(models.Model):
            state to "reserved," generate a sequence code, and send a
            confirmation email.
         """
-        self.vehicle_id.rental_check_availability = False
-        check_availability = 0
+        _logger.info("::: action_confirm start")
+        if self.rent_by_hour:
+            _rent_from = datetime.combine(self.rent_start_date, datetime.strptime(self.start_time, "%H:%M").time())
+            _rent_to = datetime.combine(self.rent_end_date, datetime.strptime(self.end_time, "%H:%M").time())
+        else:
+            _rent_from = datetime.combine(self.rent_start_date, datetime.strptime("00:00", "%H:%M").time())
+            _rent_to = datetime.combine(self.rent_end_date, datetime.strptime("23:59", "%H:%M").time())
+            
+        check_availability = True
         for each in self.vehicle_id.rental_reserved_time:
-            if each.date_from <= self.rent_start_date <= each.date_to:
-                check_availability = 1
-            elif self.rent_start_date < each.date_from:
-                if each.date_from <= self.rent_end_date <= each.date_to:
-                    check_availability = 1
-                elif self.rent_end_date > each.date_to:
-                    check_availability = 1
+            if each.date_from <= _rent_from <= each.date_to:
+                check_availability = False
+            elif _rent_from < each.date_from:
+                if each.date_from <= _rent_to <= each.date_to:
+                    check_availability = False
+                elif _rent_to > each.date_to:
+                    check_availability = False
                 else:
-                    check_availability = 0
+                    check_availability = True
             else:
-                check_availability = 0
-        if check_availability == 0:
+                check_availability = True
+
+        if check_availability:
             reserved_id = self.vehicle_id.rental_reserved_time.create(
                 {'customer_id': self.customer_id.id,
-                 'date_from': self.rent_start_date,
-                 'date_to': self.rent_end_date,
+                 'date_from': _rent_from,
+                 'date_to': _rent_to,
                  'reserved_obj_id': self.vehicle_id.id
                  })
             self.write({'reserved_fleet_id': reserved_id.id})
@@ -501,25 +522,29 @@ class CarRentalContract(models.Model):
         self.name = self.env['ir.sequence'] \
             .with_context(ir_sequence_date=order_date).next_by_code(
             sequence_code)
-        mail_content = _(
-            '<h3>Order Confirmed!</h3><br/>Hi %s, <br/> This is to notify that your rental contract has '
-            'been confirmed. <br/><br/>'
-            'Please find the details below:<br/><br/>'
-            '<table><tr><td>Reference Number<td/><td> %s<td/><tr/>'
-            '<tr><td>Time Range <td/><td> %s to %s <td/><tr/><tr><td>Vehicle <td/><td> %s<td/><tr/>'
-            '<tr><td>Point Of Contact<td/><td> %s , %s<td/><tr/><table/>') % \
-                       (self.customer_id.name, self.name, self.rent_start_date,
-                        self.rent_end_date,
-                        self.vehicle_id.name, self.sales_person.name,
-                        self.sales_person.phone)
-        main_content = {
-            'subject': _('Confirmed: %s - %s') %
-                       (self.name, self.vehicle_id.name),
-            'author_id': self.env.user.partner_id.id,
-            'body_html': mail_content,
-            'email_to': self.customer_id.email,
-        }
-        self.env['mail.mail'].create(main_content).send()
+        
+        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_send_booking'):
+            mail_content = _(
+                '<h3>Booking Confirmed!</h3><br/>Hi %s, <br/> This is to notify that your rental contract has '
+                'been confirmed. <br/><br/>'
+                'Please find the details below:<br/><br/>'
+                '<table><tr><td>Reference Number<td/><td> %s<td/><tr/>'
+                '<tr><td>Time Range <td/><td> %s to %s <td/><tr/><tr><td>Vehicle <td/><td> %s<td/><tr/>'
+                '<tr><td>Point Of Contact<td/><td> %s , %s<td/><tr/><table/>') % \
+                        (self.customer_id.name, self.name, self.rent_start_date,
+                            self.rent_end_date,
+                            self.vehicle_id.name, self.sales_person.name,
+                            self.sales_person.phone)
+            main_content = {
+                'subject': _('Confirmed: %s - %s') %
+                        (self.name, self.vehicle_id.name),
+                'author_id': self.env.user.partner_id.id,
+                'body_html': mail_content,
+                'email_to': self.customer_id.email,
+            }
+            self.env['mail.mail'].create(main_content).send()
+        _logger.info("::: %s" % self.reserved_fleet_id.date_to)
+        _logger.info("::: action_confirm end")
 
     def action_cancel(self):
         """
@@ -528,7 +553,7 @@ class CarRentalContract(models.Model):
            fleet ID if it exists.
        """
         self.state = "cancel"
-        self.vehicle_id.rental_check_availability = True
+#        self.vehicle_id.rental_check_availability = True
         if self.reserved_fleet_id:
             self.reserved_fleet_id.unlink()
 
@@ -629,17 +654,20 @@ class CarRentalContract(models.Model):
         }
         inv_id = inv_obj.create(inv_data)
         self.first_payment_inv = inv_id.id
-        product_id = self.env['product.product'].browse(
-            self.env.ref('fleet_rental.fleet_service_product').id)
-        if product_id.property_account_income_id.id:
-            income_account = product_id.property_account_income_id.id
-        elif product_id.categ_id.property_account_income_categ_id.id:
-            income_account = product_id.categ_id.property_account_income_categ_id.id
+
+        product = self.env['product.product'].search(
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+            limit=1)
+
+        if product.property_account_income_id.id:
+            income_account = product.property_account_income_id.id
+        elif product.categ_id.property_account_income_categ_id.id:
+            income_account = product.categ_id.property_account_income_categ_id.id
         else:
             raise UserError(
                 _('Please define income account for this product: "%s" (id:%d).') % (
-                    product_id.name,
-                    product_id.id))
+                    product.name,
+                    product.id))
 
         if inv_id:
             list_value = [(0, 0, {
@@ -647,7 +675,7 @@ class CarRentalContract(models.Model):
                 'price_unit': self.first_payment,
                 'quantity': 1.0,
                 'account_id': income_account,
-                'product_id': product_id.id,
+                'product_id': product.id,
                 'move_id': inv_id.id,
             })]
             inv_id.write({'invoice_line_ids': list_value})
@@ -687,7 +715,7 @@ class CarRentalContract(models.Model):
             This method is typically called when a user confirms the extension
             of a rental.
         """
-        self.vehicle_id.rental_reserved_time.write(
+        self.reserved_fleet_id.write(
             {
                 'date_to': self.rent_end_date,
             })
@@ -718,8 +746,8 @@ class CarRentalContract(models.Model):
 
     @api.constrains('rent_end_date')
     def validate_on_read_only(self):
-        old_date = self.vehicle_id.rental_reserved_time.date_to
         if self.read_only:
+            old_date = self.reserved_fleet_id.date_to
             if self.rent_end_date <= old_date:
                 raise ValidationError(
                     f"Please choose a date greater that {old_date}")
@@ -741,4 +769,4 @@ class CarRentalContract(models.Model):
                                     is raised with a relevant error message.
         """
         self.read_only = False
-        self.rent_end_date = self.vehicle_id.rental_reserved_time.date_to
+        self.rent_end_date = self.reserved_fleet_id.date_to
