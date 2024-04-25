@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
-<!--    Fleet vehicle form view-->
+
+<!--    Fleet vehicle form view
     <record id="fleet_vehicle_view_form" model="ir.ui.view">
         <field name="name">fleet.vehicle.view.form.inherit.fleet.rental</field>
         <field name="model">fleet.vehicle</field>
@@ -13,7 +14,9 @@
                 <field name="color"/>
             </field>
         </field>
-    </record>
+    </record> -->
+
+    
 <!--    Car rental contract form view-->
     <record id="car_rental_contract_view_form" model="ir.ui.view">
         <field name="name">car.rental.contract.view.form</field>
@@ -78,10 +81,14 @@
                                    readonly="state != 'draft'"/>
                             <field name="start_time" widget="timepicker_time" invisible="rent_by_hour == False"
                                    readonly="state != 'draft'" required="rent_by_hour == True"/>
+                            <field name="pickup_location"
+                                   readonly="state != 'draft'"/>
                             <field name="rent_end_date"
                                    readonly="((state != 'draft') and (read_only == False))"/>
                             <field name="end_time" widget="timepicker_time" invisible="rent_by_hour == False"
                                    readonly="(state != 'draft') and (read_only == False)" required="rent_by_hour == True"/>
+                            <field name="dropoff_location"
+                                   readonly="state != 'draft'"/>                                   
                             <field name="vehicle_id"
                                    domain="[('state_id.name','!=','Inactive')]"
                                    readonly="state != 'draft'"
@@ -103,7 +110,7 @@
                                 <field name="first_payment_inv" style="width:142px;" readonly="1"/>
                             </div>
                             <field name="account_type" invisible="1"/>
-                            <field name="cost" invisible="1"/>
+                            <field name="cost" readonly="state != 'draft'"/>
                             <label for="cost_generated"/>
                             <div>
                                 <field name="cost_frequency" class="oe_inline"
@@ -211,22 +218,38 @@
             </tree>
         </field>
     </record>
+<!--    Car rental contract calendar view-->
+    <record id="view_car_rental_contract_calendar" model="ir.ui.view">
+        <field name="name">car.rental.contract.calendar</field>
+        <field name="model">car.rental.contract</field>
+        <field name="arch" type="xml">
+            <calendar string="Car Rental Reserved" mode="month" date_start="rent_start_date" date_stop="rent_end_date" color="state" event_limit="5" quick_create="0" create="1" delete="0">
+                <field name="vehicle_id"/>
+                <field name="customer_id"/>
+                <field name="pickup_location"/>
+                <field name="dropoff_location"/>
+                <field name="total" widget="monetary"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+    
 <!--    Action rental contract-->
     <record id="action_car_rental_contract" model="ir.actions.act_window">
         <field name="name">Rental Contract</field>
         <field name="res_model">car.rental.contract</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_ids" eval="[(5, 0, 0),
+        <field name="view_mode">calendar,tree,form</field>
+        <!-- <field name="view_ids" eval="[(5, 0, 0),
                             (0, 0, {'view_mode': 'tree', 'view_id': ref('car_rental_contract_view_tree')}),
-                            (0, 0, {'view_mode': 'form', 'view_id': ref('car_rental_contract_view_form')})]"/>
+                            (0, 0, {'view_mode': 'form', 'view_id': ref('car_rental_contract_view_form')})]"/>-->
     </record>
 
     <menuitem name="Fleet Rental" id="fleet.menu_root" sequence="115"
               groups="fleet.fleet_group_user"
-              web_icon="fleet_rental,static/description/icon.png"/>
+              web_icon="fleet_rental,static/description/icon.png"/>       
     <menuitem id="menu_car_parent" sequence="1" name="Rental Management"
               parent="fleet.menu_root"/>
     <menuitem id="menu_car_rental_contract" parent="menu_car_parent"
-              name="Rental Contract"
+              name="Car Rental Contract(s)"
               action="action_car_rental_contract" sequence="1"/>
 </odoo>

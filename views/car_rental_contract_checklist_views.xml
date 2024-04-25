@@ -74,6 +74,7 @@
         <field name="domain">[('state', 'in', ('running', 'checking'))]</field>
         <field name="view_id" ref="car_rental_contract_checklist_view_form"/>
     </record>
+    
     <record id="action_fleet_rent_checklist_form" model="ir.actions.act_window.view">
         <field eval="2" name="sequence"/>
         <field name="view_mode">form</field>

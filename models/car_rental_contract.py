@@ -66,6 +66,10 @@ class CarRentalContract(models.Model):
     cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
                         required=True)
+    rent_by_hour = fields.Boolean(string="Rent By Hour",
+                                  help="Enable to start contract on "
+                                       "hour basis",
+                                  default=True)
     rent_start_date = fields.Date(string="Rent Start Date",
                                   required=True,
                                   default=str(date.today()),
@@ -73,16 +77,19 @@ class CarRentalContract(models.Model):
                                   track_visibility='onchange')
     start_time = fields.Char(string="Start By",
                              help="Enter the contract starting hour")
-    end_time = fields.Char(string="End By",
-                           help="Enter the contract Ending hour")
-    rent_by_hour = fields.Boolean(string="Rent By Hour",
-                                  help="Enable to start contract on "
-                                       "hour basis",
-                                  default=True)
+    pickup_location = fields.Char(string="Pickup location",
+                           help="Enter the pickup location",
+                           required=True)
     rent_end_date = fields.Date(string="Rent End Date",
                                 required=True,
                                 help="End date of contract",
                                 track_visibility='onchange')
+    end_time = fields.Char(string="End By",
+                           help="Enter the contract Ending hour")
+    dropoff_location = fields.Char(string="Drop off location",
+                           help="Enter the drop off location",
+                           required=True)
+
     state = fields.Selection(
         [('draft', 'Draft'), ('reserved', 'Reserved'), ('running', 'Running'),
          ('cancel', 'Cancel'),
@@ -90,13 +97,15 @@ class CarRentalContract(models.Model):
         string="State", default="draft",
         copy=False, track_visibility='onchange')
     notes = fields.Text(string="Details & Notes")
+    
     cost_generated = fields.Float(string='Recurring Cost',
                                   help="Costs paid at regular intervals, depending on the cost frequency")
+    
     cost_frequency = fields.Selection(
         [('no', 'No'), ('daily', 'Daily'), ('weekly', 'Weekly'),
-         ('monthly', 'Monthly'),
-         ('yearly', 'Yearly')], string="Recurring Cost Frequency",
-        help='Frequency of the recurring cost', required=True)
+         ('monthly', 'Monthly')], string="Recurring Cost Frequency",
+        help='Frequency of the recurring cost', default="no", required=True)
+    
     journal_type = fields.Many2one('account.journal', 'Journal',
                                    default=lambda self: self.env[
                                        'account.journal'].search(
@@ -492,18 +501,9 @@ class CarRentalContract(models.Model):
             
         check_availability = True
         for each in self.vehicle_id.rental_reserved_time:
-            if each.date_from <= _rent_from <= each.date_to:
+            if each.date_from <= _rent_to and each.date_to >= _rent_from:
                 check_availability = False
-            elif _rent_from < each.date_from:
-                if each.date_from <= _rent_to <= each.date_to:
-                    check_availability = False
-                elif _rent_to > each.date_to:
-                    check_availability = False
-                else:
-                    check_availability = True
-            else:
-                check_availability = True
-
+                
         if check_availability:
             reserved_id = self.vehicle_id.rental_reserved_time.create(
                 {'customer_id': self.customer_id.id,
