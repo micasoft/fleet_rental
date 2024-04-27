@@ -42,3 +42,8 @@ class ResConfigSettings(models.TransientModel):
         string="Booking reserved",
         config_parameter='fleet_rental_send_booking',
         help="Enable to send a e-mail when the booking is reserved")
+
+    fleet_rental_send_recurring_reminder = fields.Boolean (
+        string="Recurring invoice",
+        config_parameter='fleet_rental_send_recurring_reminder',
+        help="Enable to send a e-mail about the recurring invoice")

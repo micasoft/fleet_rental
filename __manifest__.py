@@ -28,10 +28,10 @@
     It manages fleet/vehicle property by extending the basic fleet module of Odoo.
     Currently fleet module does not have any connection with accounting module.
     But in this module, we integrate the module with accounting also.""",
-    'author': 'Cybrosys Techno Solutions',
-    'company': 'Cybrosys Techno Solutions',
-    'maintainer': 'Cybrosys Techno Solutions',
-    'website': "https://www.cybrosys.com",
+    'author': 'Jorge Carneiro',
+    'company': 'micasoft',
+    'maintainer': 'micasoft',
+    'website': "https://github.com/micasoft/fleet_rental",
     'depends': ['account', 'fleet', 'mail'],
     'data': [
         'security/fleet_rental_groups.xml',
@@ -39,8 +39,8 @@
         'security/ir.model.access.csv',
         'data/fleet_rental_data.xml',
         'data/ir_cron_data.xml',
+        'data/mail_template_data.xml',
         'views/car_rental_contract_views.xml',
-        'views/car_rental_contract_checklist_views.xml',
         'views/car_tools_views.xml',
         'views/res_config_settings_views.xml',
         'reports/report_fleet_rental.xml',

@@ -22,15 +22,13 @@
 from odoo import api, fields, models
 
 
-class CarRentalChecklist(models.Model):
-    """Model to add the checklist of rental"""
-    _name = 'car.rental.checklist'
+class CarRentalLineTools(models.Model):
+    """Model to add the line tools of rental"""
+    _name = 'car.rental.line.tools'
 
     name = fields.Many2one('car.rental.tools', string="Name",
                            help='Select car tools')
-    checklist_active = fields.Boolean(string="Available",
-                                      default=True,
-                                      help='Enable when the tool is available while checking')
+
     checklist_number = fields.Many2one('car.rental.contract',
                                        string="Checklist Number",
                                        help='Number of checklist')

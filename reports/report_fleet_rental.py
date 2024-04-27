@@ -33,7 +33,7 @@ class FleetRentalReport(models.Model):
     vehicle_id = fields.Many2one('fleet.vehicle')
     car_brand = fields.Char(string="Car Brand")
     car_color = fields.Char(string="Car Color")
-    cost = fields.Float(string="Rent Cost")
+    rent_cost = fields.Float(string="Rent Cost")
     rent_start_date = fields.Date(string="Rent Start Date")
     rent_end_date = fields.Date(string="Rent End Date")
     state = fields.Selection(
@@ -44,9 +44,7 @@ class FleetRentalReport(models.Model):
          ('monthly', 'Monthly'),
          ('yearly', 'Yearly')], string="Recurring Cost Frequency")
     total = fields.Float(string="Total(Tools)")
-    tools_missing_cost = fields.Float(string="Tools missing cost")
     damage_cost = fields.Float(string="Damage cost")
-    damage_cost_sub = fields.Float(string="Damage cost")
     total_cost = fields.Float(string="Total cost")
 
 
@@ -63,15 +61,13 @@ class FleetRentalReport(models.Model):
                     t.customer_id as customer_id,
                     t.vehicle_id as vehicle_id,
                     t.car_color as car_color,
-                    t.cost as cost,
+                    t.rent_cost as cost,
                     t.rent_start_date as rent_start_date,
                     t.rent_end_date as rent_end_date,
                     t.state as state,
                     t.cost_frequency as cost_frequency,
-                    t.total as total,
-                    t.tools_missing_cost as tools_missing_cost,
+                    t.tools_cost as tools_cost,
                     t.damage_cost as damage_cost,
-                    t.damage_cost_sub as damage_cost_sub,
                     t.total_cost as total_cost
         """
         return select_str
@@ -88,15 +84,13 @@ class FleetRentalReport(models.Model):
                     customer_id,
                     vehicle_id,
                     car_color,
-                    cost,
+                    rent_cost,
                     rent_start_date,
                     rent_end_date,
                     state,
                     cost_frequency,
-                    total,
-                    tools_missing_cost,
+                    tools_cost,
                     damage_cost,
-                    damage_cost_sub,
                     total_cost
         """
         return group_by_str

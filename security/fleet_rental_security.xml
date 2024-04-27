@@ -9,10 +9,10 @@
             ['|',('company_id','=',False),('company_id','in', company_ids)]
         </field>
     </record>
-    <!--  Record rule for Car Rental Checklist multi-company-->
-    <record id="car_rental_checklist_multi_company_rule" model="ir.rule">
+    <!--  Record rule for Car Rental Line Tools multi-company-->
+    <record id="car_rental_line_tools_multi_company_rule" model="ir.rule">
         <field name="name">Car Rental Checklist multi-company</field>
-        <field name="model_id" ref="fleet_rental.model_car_rental_checklist"/>
+        <field name="model_id" ref="fleet_rental.model_car_rental_line_tools"/>
         <field eval="True" name="global"/>
         <field name="domain_force">
             ['|',('company_id','=',False),('company_id','in', company_ids)]

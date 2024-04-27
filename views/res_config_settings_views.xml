@@ -26,6 +26,10 @@
                                     <label for="fleet_rental_send_booking" class="col-lg-4 o_light_label"/>
                                     <field name="fleet_rental_send_booking" class="oe_inline"/>
                                 </div>
+                                <div class="text-muted content-group mt16">
+                                    <label for="fleet_rental_send_recurring" class="col-lg-4 o_light_label"/>
+                                    <field name="fleet_rental_send_recurring" class="oe_inline"/>
+                                </div>                                
                             </div>
                         </div>
                     </div>

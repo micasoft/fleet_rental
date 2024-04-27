@@ -24,7 +24,7 @@ from . import account_move_line
 from . import car_rental_contract
 from . import car_rental_tools
 from . import car_rental_line
-from . import car_rental_checklist
+from . import car_rental_line_tools
 from . import car_rental_reserved
 from . import fleet_vehicle
 from . import res_config_settings

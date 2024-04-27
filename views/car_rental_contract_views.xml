@@ -25,20 +25,23 @@
         <field name="arch" type="xml">
             <form string="car_result">
                 <header>
-                    <button name="action_confirm" string="Confirm" type="object"
+                    <button name="action_send_quote" string="Send quote" type="object"
                             invisible="state != 'draft'"
                             class="oe_highlight"/>
-                    <button name="action_run" string="Run" type="object"
+                    <button name="action_confirm" string="Reserve" type="object"
+                            invisible="state != 'draft'"
+                            class="oe_highlight"/>
+                    <button name="action_run" string="Sart the renting" type="object"
                             invisible="state != 'reserved'"
                             class="oe_highlight"/>
                     <button name="action_cancel" string="Cancel" type="object"
                             invisible="state not in ['draft', 'reserved']"
                             class="oe_highlight"/>
                     <button name="action_invoice_create" string="Create Invoice"
-                            invisible="((state != 'running') or (first_invoice_created == True) or (read_only == True))"
+                            invisible="((state != 'running') or (first_invoice_created or first_payment == 0.0) or (read_only == True))"
                             type="object" class="oe_highlight"/>
                     <button name="action_extend_rent" string="Extend Rent"
-                            invisible="((state != 'running') or (read_only == True) or (first_invoice_created == False))"
+                            invisible="((state != 'running') or (read_only == True) or (first_invoice_created == False and first_payment > 0.0))"
                             type="object"
                             class="oe_highlight"/>
                     <button name="action_confirm_extend_rent" string="Confirm Extend"
@@ -48,7 +51,10 @@
                             invisible="((state != 'running') or (read_only == False))" type="object"
                             class="oe_highlight"/>
                     <button name="force_checking" string="Force Checking"
-                            invisible="((state != 'running') or (first_invoice_created == False))"
+                            invisible="((state != 'running') or (first_invoice_created == False and first_payment > 0.0))"
+                            type="object" class="oe_highlight"/>
+                    <button name="action_verify" string="Verify/Invoice"
+                            invisible="state != 'checking'" 
                             type="object" class="oe_highlight"/>
                     <button name="set_to_done" string="Set to Done"
                             invisible="state not in ['invoice']" type="object" class="oe_highlight"/>
@@ -84,7 +90,7 @@
                             <field name="pickup_location"
                                    readonly="state != 'draft'"/>
                             <field name="rent_end_date"
-                                   readonly="((state != 'draft') and (read_only == False))"/>
+                                   readonly="((state not in ['draft']) and (read_only == False))"/>
                             <field name="end_time" widget="timepicker_time" invisible="rent_by_hour == False"
                                    readonly="(state != 'draft') and (read_only == False)" required="rent_by_hour == True"/>
                             <field name="dropoff_location"
@@ -94,23 +100,22 @@
                                    readonly="state != 'draft'"
                                    options="{'no_create': True}"/>
                             <field name="journal_type" invisible="1"/>
-                            <field name="check_verify" invisible="1"/>
                             <field name="sales_person"
                                    readonly="state != 'draft'"/>
                         </group>
                         <group>
                             <field name="car_brand"/>
                             <field name="car_color"/>
-                            <field name="company_id"/>
+                            <field name="company_id" readonly="state != 'draft'"/>
                             <field name="first_invoice_created" invisible="1"/>
                             <label for="first_payment"/>
                             <div>
                                 <field name="first_payment" class="oe_inline"
-                                       readonly="((state not in ['draft', 'running']) or (first_invoice_created == True))"/>
+                                       readonly="((state not in ['draft', 'running']))"/>
                                 <field name="first_payment_inv" style="width:142px;" readonly="1"/>
                             </div>
                             <field name="account_type" invisible="1"/>
-                            <field name="cost" readonly="state != 'draft'"/>
+                            <field name="rent_cost" readonly="state not in ['draft', 'running', 'checking']"/>
                             <label for="cost_generated"/>
                             <div>
                                 <field name="cost_frequency" class="oe_inline"
@@ -150,41 +155,26 @@
                                            invisible="state != 'checking'"/>
                                 </group>
                             </group>
-                            <field name="checklist_line" readonly="(state == 'invoice') or (state == 'done') or (state == 'cancel')">
+                            <field name="line_tools" readonly="(state == 'invoice') or (state == 'done') or (state == 'cancel')">
                                 <tree string="Fleet Checklist Lines"
                                       editable="bottom">
                                     <field name="name"/>
-                                    <field name="checklist_active"/>
-                                    <field name="checklist_number" invisible="True"/>
                                     <field name="price"/>
                                 </tree>
                                 <form>
                                     <sheet>
                                         <group>
                                             <field name="name"/>
-                                            <field name="checklist_active"
-                                                   invisible="1"/>
-                                            <field name="checklist_number"
-                                                   invisible="1"/>
                                         </group>
                                     </sheet>
                                 </form>
                             </field>
                             <div>
                                 <group class="oe_subtotal_footer oe_right">
-                                    <field name="total"/>
-                                    <field name="tools_missing_cost"/>
-                                    <field name="damage_cost_sub"/>
+                                    <field name="tools_cost"/>
                                     <field name="total_cost"
                                            class="oe_subtotal_footer_separator"/>
                                 </group>
-                            </div>
-                            <div style="float: right;margin-left: 78%;margin-bottom: 36px;">
-                                <button name="action_verify" string="Verify"
-                                        type="object"
-                                        style="width: 100px !important;height: 40px;"
-                                        invisible="state != 'checking'"
-                                        class="oe_subtotal_footer oe_right oe_highlight"/>
                             </div>
                         </page>
                     </notebook>
@@ -228,7 +218,7 @@
                 <field name="customer_id"/>
                 <field name="pickup_location"/>
                 <field name="dropoff_location"/>
-                <field name="total" widget="monetary"/>
+                <field name="total_cost" widget="monetary"/>
                 <field name="state"/>
             </calendar>
         </field>

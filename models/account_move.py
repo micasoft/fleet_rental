@@ -43,7 +43,6 @@ class AccountMove(models.Model):
         fleet_model = self.env['car.rental.contract'].search(
             [('id', '=', self.fleet_rent_id.id)])
         if fleet_model.state == 'running':
-            fleet_model.state = 'running'
             fleet_model.first_invoice_created = False
         else:
             fleet_model.state = 'checking'

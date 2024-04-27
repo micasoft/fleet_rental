@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data noupdate="1">
+    <record id="mail_template_quote" model="mail.template">
+        <field name="name">Car Rental: Quote</field>
+        <field name="description">Sent to customers a quote related to the reservation</field>
+        <field name="model_id" 
+            ref="fleet_rental.model_car_rental_contract" />
+        <field name="subject">Renting quote for {{object.vehicle_id.model_id.display_name}} </field>
+        <field name="partner_to">{{ object.customer_id.id }}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
+        <br /><br />
+        <p>Here is our best offer for your renting booking.</p>
+        <p><b>Please find the details below:</b><br/>
+        Time Range <t t-out="object.rent_start_date or ''">01-01-2024</t> to <t t-out="object.rent_end_date or ''">31-01-2024</t><br/>
+        Pick up <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
+        Drop off <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
+        Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-benz CLS</t><br/>
+        Estimated cost <t t-out="object.total_cost or ''">5 000.00</t><br/>
+        Point Of Contact <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
+        Do not hesitate to contact us if you have any questions.
+        <br /><br />
+        <t t-out="object.sales_person.signature or ''">--<br/>Mitchell Admin</t>
+    </p>
+</div>
+        </field>
+    </record>
+    
+    <record id="mail_template_reserved" model="mail.template">
+        <field name="name">Car Rental: Reservation</field>
+        <field name="description">Sent to customers reservation</field>
+        <field name="model_id" 
+            ref="fleet_rental.model_car_rental_contract" />
+        <field name="subject">Reservation for {{object.vehicle_id.model_id.display_name}}</field>
+        <field name="partner_to">{{ object.customer_id.id }}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
+        <br /><br />
+        <p>Booking Confirmed! This is to notify that your rental contract has been confirmed.</p>
+        <p><b>Please find the details below:</b><br/>
+        Time Range <t t-out="object.rent_start_date or ''">01-01-2024</t> to <t t-out="object.rent_end_date or ''">31-01-2024</t><br/>
+        Pick up <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
+        Drop off <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
+        Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-Benz CLS</t><br/>
+        Estimated cost <t t-out="object.total_cost or ''">5 000.00</t><br/>
+        Point Of Contact <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
+        Do not hesitate to contact us if you have any questions.
+        <br /><br />
+        <t t-out="object.sales_person.signature or ''">--<br/>Mitchell Admin</t>
+    </p>
+</div>
+        </field>
+    </record>
+
+    <record id="mail_template_recurring_reminder" model="mail.template">
+        <field name="name">Car Rental: Recurring reminder</field>
+        <field name="description">Sent to customers the recurring reminder</field>
+        <field name="model_id" 
+            ref="fleet_rental.model_car_rental_contract" />
+        <field name="subject">Reminder Recurrent Payment!</field>
+        <field name="partner_to">{{ object.customer_id.id }}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        <h3>Reminder Recurrent Payment!</h3>
+        Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
+        <br /><br />
+        <p>his is to remind you that the recurrent payment for the rental contract has to be done. 
+            Please make the payment at the earliest.</p>
+        <p><b>Please find the details below:</b><br/>
+        Contract Ref <t t-out="object.name or ''">RENT/2024/0001</t><br/>
+        Responsible Person <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
+        Do not hesitate to contact us if you have any questions.
+        <br /><br />
+        <t t-out="object.sales_person.signature or ''">--<br/>Mitchell Admin</t>
+    </p>
+</div>
+        </field>
+    </record>
+</data>
+</odoo>
