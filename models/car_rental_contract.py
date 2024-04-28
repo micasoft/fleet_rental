@@ -243,14 +243,43 @@ class CarRentalContract(models.Model):
             Perform actions related to fleet scheduling, including creating
             invoices, managing recurring data, and sending email notifications.
         """
+        self._create_recurring_invoice(self, rent_date)
+
+
+    @api.model
+    def fleet_scheduler(self):
+        """
+            Perform fleet scheduling operations, including creating invoices,
+            managing recurring data, and sending email notifications.
+        """
+
+        for record in self.search([]):
+            start_date = datetime.strptime(str(record.rent_start_date),
+                                           '%Y-%m-%d').date()
+            end_date = datetime.strptime(str(record.rent_end_date),
+                                         '%Y-%m-%d').date()
+            if end_date >= date.today():
+                temp = 0
+                if record.cost_frequency == 'daily':
+                    temp = 1
+                elif record.cost_frequency == 'weekly':
+                    week_days = (date.today() - start_date).days
+                    if week_days % 7 == 0 and week_days != 0:
+                        temp = 1
+                elif record.cost_frequency == 'monthly':
+                    if start_date.day == date.today().day and start_date != date.today():
+                        temp = 1
+                if temp == 1 and record.cost_frequency != "no" and record.state == "running":
+                    self._create_recurring_invoice(record)
+            else:
+                if self.state == 'running':
+                    record.state = "checking"
+
+    def _create_recurring_invoice(self, record, invoice_date = date.today()):
+
         inv_obj = self.env['account.move']
         recurring_obj = self.env['car.rental.line']
-        supplier = self.customer_id
-
-        self.env['ir.config_parameter'].sudo().get_param(
-                'fleet_rental_send_booking')
-        
-
+        supplier = record.customer_id
         product = self.env['product.product'].search(
             [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
             limit=1)
@@ -263,139 +292,45 @@ class CarRentalContract(models.Model):
                 _('Please define income account for this product: "%s" (id:%d).') % (
                     product.name,
                     product.id))
+
         inv_data = {
             'ref': supplier.name,
             'partner_id': supplier.id,
-            'journal_id': self.journal_type.id,
-            'invoice_origin': self.name,
-            'fleet_rent_id': self.id,
+            'currency_id': record.account_type.company_id.currency_id.id,
+            'journal_id': record.journal_type.id,
+            'invoice_origin': record.name,
+            'fleet_rent_id': record.id,
+            'invoice_date': invoice_date,
+            'company_id': record.account_type.company_id.id,
             'invoice_payment_term_id': None,
-            'invoice_date_due': self.rent_end_date,
+            'invoice_date_due': record.rent_end_date,
             'move_type': 'out_invoice',
             'invoice_line_ids': [(0, 0, {
+                'name': self.vehicle_id.name,
                 'account_id': income_account.id,
-                'price_unit': self.cost_generated,
+                'price_unit': record.cost_generated,
                 'quantity': 1,
                 'product_id': product.id,
             })]
         }
         inv_id = inv_obj.create(inv_data)
-
         recurring_data = {
-            'name': self.vehicle_id.name,
-            'date_today': rent_date,
+            'name': record.vehicle_id.name,
+            'date_today': invoice_date,
             'account_info': income_account.name,
-            'rental_number': self.id,
-            'recurring_amount': self.cost_generated,
+            'rental_number': record.id,
+            'recurring_amount': record.cost_generated,
             'invoice_number': inv_id.id,
             'invoice_ref': inv_id.id,
         }
         recurring_obj.create(recurring_data)
-
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_send_recurring_reminder'):
-            reservation_template = self.env.ref('fleet_rental.mail_template_recurring_reminder')
-            reservation_template.send_mail(self.id) 
+            reservation_template = self.env.ref('fleet_rental.mail_template_recurring_reminder').with_context(
+                invoice=inv_id
+            )
+            reservation_template.send_mail(self.id)
+        return inv_id
 
-    @api.model
-    def fleet_scheduler(self):
-        """
-            Perform fleet scheduling operations, including creating invoices,
-            managing recurring data, and sending email notifications.
-        """
-        inv_obj = self.env['account.move']
-        recurring_obj = self.env['car.rental.line']
-        today = date.today()
-        for records in self.search([]):
-            start_date = datetime.strptime(str(records.rent_start_date),
-                                           '%Y-%m-%d').date()
-            end_date = datetime.strptime(str(records.rent_end_date),
-                                         '%Y-%m-%d').date()
-            if end_date >= date.today():
-                temp = 0
-                if records.cost_frequency == 'daily':
-                    temp = 1
-                elif records.cost_frequency == 'weekly':
-                    week_days = (date.today() - start_date).days
-                    if week_days % 7 == 0 and week_days != 0:
-                        temp = 1
-                elif records.cost_frequency == 'monthly':
-                    if start_date.day == date.today().day and start_date != date.today():
-                        temp = 1
-                elif records.cost_frequency == 'yearly':
-                    if start_date.day == date.today().day and start_date.month == date.today().month and \
-                            start_date != date.today():
-                        temp = 1
-                if temp == 1 and records.cost_frequency != "no" and records.state == "running":
-                    supplier = records.customer_id
-                    product = self.env['product.product'].search(
-                        [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
-                        limit=1)
-                    if product.property_account_income_id.id:
-                        income_account = product.property_account_income_id
-                    elif product.categ_id.property_account_income_categ_id.id:
-                        income_account = product.categ_id.property_account_income_categ_id
-                    else:
-                        raise UserError(
-                            _('Please define income account for this product: "%s" (id:%d).') % (
-                                product.name,
-                                product.id))
-                    inv_data = {
-                        'ref': supplier.name,
-                        'partner_id': supplier.id,
-                        'currency_id': records.account_type.company_id.currency_id.id,
-                        'journal_id': records.journal_type.id,
-                        'invoice_origin': records.name,
-                        'fleet_rent_id': records.id,
-                        'invoice_date': today,
-                        'company_id': records.account_type.company_id.id,
-                        'invoice_payment_term_id': None,
-                        'invoice_date_due': records.rent_end_date,
-                        'move_type': 'out_invoice',
-                        'invoice_line_ids': [(0, 0, {
-                            'account_id': income_account.id,
-                            'price_unit': records.cost_generated,
-                            'quantity': 1,
-                            'product_id': product.id,
-                        })]
-                    }
-                    inv_id = inv_obj.create(inv_data)
-                    recurring_data = {
-                        'name': records.vehicle_id.name,
-                        'date_today': today,
-                        'account_info': income_account.name,
-                        'rental_number': records.id,
-                        'recurring_amount': records.cost_generated,
-                        'invoice_number': inv_id.id,
-                        'invoice_ref': inv_id.id,
-                    }
-                    recurring_obj.create(recurring_data)
-
-                    mail_content = _(
-                        '<h3>Reminder Recurrent Payment!</h3><br/>Hi %s, <br/> This is to remind you that the '
-                        'recurrent payment for the '
-                        'rental contract has to be done.'
-                        'Please make the payment at the earliest.'
-                        '<br/><br/>'
-                        'Please find the details below:<br/><br/>'
-                        '<table><tr><td>Contract Ref<td/><td> %s<td/><tr/>'
-                        '<tr/><tr><td>Amount <td/><td> %s<td/><tr/>'
-                        '<tr/><tr><td>Due Date <td/><td> %s<td/><tr/>'
-                        '<tr/><tr><td>Responsible Person <td/><td> %s, %s<td/><tr/><table/>') % \
-                                   (self.customer_id.name, self.name,
-                                    inv_id.amount_total,
-                                    inv_id.invoice_date_due,
-                                    inv_id.user_id.name,
-                                    inv_id.user_id.mobile)
-                    main_content = {
-                        'subject': "Reminder Recurrent Payment!",
-                        'author_id': self.env.user.partner_id.id,
-                        'body_html': mail_content,
-                        'email_to': self.customer_id.email,
-                    }
-                    self.env['mail.mail'].create(main_content).send()
-            else:
-                if self.state == 'running':
-                    records.state = "checking"
 
     def action_verify(self):
         """
@@ -587,8 +522,6 @@ class CarRentalContract(models.Model):
                     rental_days = int(rental_days / 7)
                 if each.cost_frequency == 'monthly':
                     rental_days = int(rental_days / 30)
-                if each.cost_frequency == 'yearly':
-                    rental_days = int(rental_days / 365)
                 for _ in range(0, rental_days + 1):
                     if rent_date > datetime.strptime(str(each.rent_end_date),
                                                      "%Y-%m-%d").date():
@@ -600,8 +533,6 @@ class CarRentalContract(models.Model):
                         rent_date = rent_date + timedelta(days=7)
                     if each.cost_frequency == 'monthly':
                         rent_date = rent_date + timedelta(days=30)
-                    if each.cost_frequency == 'yearly':
-                        rent_date = rent_date + timedelta(days=365)
         self.first_invoice_created = True
         inv_obj = self.env['account.move']
         supplier = self.customer_id

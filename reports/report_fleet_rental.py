@@ -41,8 +41,7 @@ class FleetRentalReport(models.Model):
          ('checking', 'Checking'), ('done', 'Done')], string="State")
     cost_frequency = fields.Selection(
         [('no', 'No'), ('once', 'Full contract'), ('daily', 'Daily'), ('weekly', 'Weekly'),
-         ('monthly', 'Monthly'),
-         ('yearly', 'Yearly')], string="Recurring Cost Frequency")
+         ('monthly', 'Monthly')], string="Recurring Cost Frequency")
     total = fields.Float(string="Total(Tools)")
     damage_cost = fields.Float(string="Damage cost")
     total_cost = fields.Float(string="Total cost")

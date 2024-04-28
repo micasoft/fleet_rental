@@ -41,7 +41,7 @@
     <p style="margin: 0px; padding: 0px; font-size: 13px;">
         Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
         <br /><br />
-        <p>Booking Confirmed! This is to notify that your rental contract has been confirmed.</p>
+        <p>Booking Confirmed! This is to notify you that your rental contract has been confirmed.</p>
         <p><b>Please find the details below:</b><br/>
         Time Range <t t-out="object.rent_start_date or ''">01-01-2024</t> to <t t-out="object.rent_end_date or ''">31-01-2024</t><br/>
         Pick up <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
@@ -74,6 +74,8 @@
             Please make the payment at the earliest.</p>
         <p><b>Please find the details below:</b><br/>
         Contract Ref <t t-out="object.name or ''">RENT/2024/0001</t><br/>
+        Amount <t t-out="ctx.get('invoice').amount_total or ''">5 000.00</t><br/>
+        Due Date <t t-out="ctx.get('invoice').invoice_date_due or ''">12/12/2024</t><br/>
         Responsible Person <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
         Do not hesitate to contact us if you have any questions.
         <br /><br />

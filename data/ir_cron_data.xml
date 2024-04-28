@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
     <record id="cron_scheduler_for_fleet" model="ir.cron">
-        <field name="name">Fleet scheduler</field>
+        <field name="name">Car Rental: Fleet scheduler</field>
         <field name="model_id" ref="fleet_rental.model_car_rental_contract"/>
         <field name="state">code</field>
         <field name="code">model.fleet_scheduler()</field>
@@ -10,6 +10,7 @@
         <field name="interval_number">1</field>
         <field name="interval_type">days</field>
         <field name="numbercall">-1</field>
+        <field name="nextcall" eval="(datetime.utcnow() + timedelta(days=0)).strftime('%Y-%m-%d 09:00:00')" />
         <field name="doall" eval="False"/>
     </record>
 </odoo>
