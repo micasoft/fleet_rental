@@ -26,7 +26,7 @@
             <form string="car_result">
                 <header>
                     <button name="action_send_quote" string="Send quote" type="object"
-                            invisible="state != 'draft'"
+                            invisible="(state != 'draft') or (sent_quote == True)"
                             class="oe_highlight"/>
                     <button name="action_confirm" string="Reserve" type="object"
                             invisible="state != 'draft'"
@@ -81,18 +81,14 @@
                         <group>
                             <field name="customer_id" string="Customer"
                                    readonly="state != 'draft'"/>
-                            <field name="rent_by_hour" readonly="state != 'draft'"/>
+                            <field name="sent_quote" invisible="1"/>
                             <field name="read_only" invisible="1"/>
                             <field name="rent_start_date"
                                    readonly="state != 'draft'"/>
-                            <field name="start_time" widget="timepicker_time" invisible="rent_by_hour == False"
-                                   readonly="state != 'draft'" required="rent_by_hour == True"/>
                             <field name="pickup_location"
                                    readonly="state != 'draft'"/>
                             <field name="rent_end_date"
                                    readonly="((state not in ['draft']) and (read_only == False))"/>
-                            <field name="end_time" widget="timepicker_time" invisible="rent_by_hour == False"
-                                   readonly="(state != 'draft') and (read_only == False)" required="rent_by_hour == True"/>
                             <field name="dropoff_location"
                                    readonly="state != 'draft'"/>                                   
                             <field name="vehicle_id"
@@ -143,7 +139,7 @@
                                 </tree>
                             </field>
                         </page>
-                        <page string="Checklist">
+                        <page string="Accessories/Tools">
                             <group>
                                 <group>
                                     <field name="attachment_ids"
@@ -159,6 +155,7 @@
                                 <tree string="Fleet Checklist Lines"
                                       editable="bottom">
                                     <field name="name"/>
+                                    <field name="unit" readonly="True"/>
                                     <field name="price"/>
                                 </tree>
                                 <form>
@@ -219,7 +216,7 @@
                 <field name="pickup_location"/>
                 <field name="dropoff_location"/>
                 <field name="total_cost" widget="monetary"/>
-                <field name="state"/>
+                <field name="state" filters="1"/>
             </calendar>
         </field>
     </record>
@@ -229,9 +226,6 @@
         <field name="name">Rental Contract</field>
         <field name="res_model">car.rental.contract</field>
         <field name="view_mode">calendar,tree,form</field>
-        <!-- <field name="view_ids" eval="[(5, 0, 0),
-                            (0, 0, {'view_mode': 'tree', 'view_id': ref('car_rental_contract_view_tree')}),
-                            (0, 0, {'view_mode': 'form', 'view_id': ref('car_rental_contract_view_form')})]"/>-->
     </record>
 
     <menuitem name="Fleet Rental" id="fleet.menu_root" sequence="115"

@@ -43,6 +43,7 @@
         'views/car_rental_contract_views.xml',
         'views/car_tools_views.xml',
         'views/res_config_settings_views.xml',
+        'views/fleet_vehicle_views.xml',
         'reports/report_fleet_rental.xml',
     ],
     'assets': {

@@ -22,11 +22,10 @@
 from odoo import fields, models
 
 
-class EmployeeFleet(models.Model):
+class CarRentalFleetVehicle(models.Model):
     """Inherit fleet.vehicle"""
     _inherit = 'fleet.vehicle'
 
-    color = fields.Char(string='Color', default='#FFFFFF')
     rental_reserved_time = fields.One2many('car.rental.reserved',
                                            'reserved_obj_id',
                                            string='Reserved Time',
@@ -40,6 +39,14 @@ class EmployeeFleet(models.Model):
                                   ('hybrid', 'Hybrid'),
                                   ('petrol', 'Petrol')],
                                  string='Fuel Type', help='Fuel Used by the vehicle')
+    
+    cost_per_day = fields.Float(string="Rent cost per day",
+                        help="This fields is to determine the cost of rent per day",
+                        required=True)
+
+    deposit = fields.Float(string="Deposit value",
+                        help="This fields is to determine the deposit value per day",
+                        required=True)
 
     _sql_constraints = [('vin_sn_unique', 'unique (vin_sn)',
                          "Chassis Number already exists !"),

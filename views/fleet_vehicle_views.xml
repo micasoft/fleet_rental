@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--    Inherited view for Fleet vehicle-->
+    <record id="fleet_vehicle_view_form" model="ir.ui.view">
+        <field name="name">
+            fleet.vehicle.view.form.inherit.fleet.rental
+        </field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id"
+               ref="fleet.fleet_vehicle_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='location']"
+                   position="after">
+                <field name="cost_per_day"/>
+                <field name="deposit"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -12,7 +12,9 @@
                         <group>
                             <field name="name"/>
                         </group>
+                        
                         <group>
+                            <field name="unit"/>
                             <field name="price"/>
                         </group>
                     </group>
@@ -28,6 +30,7 @@
         <field name="arch" type="xml">
             <tree string="Accessories/Tools">
                 <field name="name"/>
+                <field name="unit" />
                 <field name="price"/>
             </tree>
         </field>

@@ -27,4 +27,9 @@ class CarRentalTools(models.Model):
     _name = 'car.rental.tools'
 
     name = fields.Char(string="Name", help='Name of the car rental tool')
+
+    unit = fields.Selection(
+        [('once', 'Once'), ('daily', 'Daily')], string="Charge",
+        help='The unit of the price, once per contract or per day', default="once", required=True)
+
     price = fields.Float(string="Price", help='Price of the car rental tool')

@@ -20,10 +20,13 @@
 #
 #############################################################################
 import logging
+import math
 
 from datetime import datetime, date, timedelta
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
+
+DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class CarRentalContract(models.Model):
     _logger = logging.getLogger(__name__)
@@ -66,11 +69,7 @@ class CarRentalContract(models.Model):
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
                         required=True)
-    rent_by_hour = fields.Boolean(string="Rent By Hour",
-                                  help="Enable to start contract on "
-                                       "hour basis",
-                                  default=True)
-    rent_start_date = fields.Date(string="Rent Start Date",
+    rent_start_date = fields.Datetime(string="Rent Start Date",
                                   required=True,
                                   default=str(date.today()),
                                   help="Start date of contract",
@@ -80,14 +79,14 @@ class CarRentalContract(models.Model):
     pickup_location = fields.Char(string="Pickup location",
                            help="Enter the pickup location",
                            required=True)
-    rent_end_date = fields.Date(string="Rent End Date",
+    rent_end_date = fields.Datetime(string="Rent End Date",
                                 required=True,
                                 help="End date of contract",
                                 track_visibility='onchange')
     end_time = fields.Char(string="End By",
                            help="Enter the contract Ending hour")
-    dropoff_location = fields.Char(string="Drop off location",
-                           help="Enter the drop off location",
+    dropoff_location = fields.Char(string="Return location",
+                           help="Enter the return location",
                            required=True)
 
     state = fields.Selection(
@@ -157,6 +156,9 @@ class CarRentalContract(models.Model):
     company_id = fields.Many2one('res.company', string='Company',
                                  default=lambda self: self.env.company,
                                  help="Company this record owns")
+    
+    sent_quote = fields.Boolean(string="Quote sent",
+                                invisible=True, default=False, copy=False)
 
     def action_run(self):
         """
@@ -185,12 +187,8 @@ class CarRentalContract(models.Model):
         self.state = 'done'
 
     def _check_availability(self):
-        if self.rent_by_hour:
-            _rent_from = datetime.combine(self.rent_start_date, datetime.strptime(self.start_time, "%H:%M").time())
-            _rent_to = datetime.combine(self.rent_end_date, datetime.strptime(self.end_time, "%H:%M").time())
-        else:
-            _rent_from = datetime.combine(self.rent_start_date, datetime.strptime("00:00", "%H:%M").time())
-            _rent_to = datetime.combine(self.rent_end_date, datetime.strptime("23:59", "%H:%M").time())
+        _rent_from = datetime.strptime(str(self.rent_start_date), DATE_FORMAT)
+        _rent_to = datetime.strptime(str(self.rent_end_date), DATE_FORMAT)
         
         check_availability = True
         for each in self.vehicle_id.rental_reserved_time:
@@ -226,7 +224,7 @@ class CarRentalContract(models.Model):
             state_id = self.env.ref('fleet_rental.vehicle_state_active').id
             self.vehicle_id.write({'state_id': state_id})
 
-    @api.constrains('line_tools', 'damage_cost', 'first_payment', 'rent_cost')
+    @api.constrains('line_tools', 'damage_cost', 'first_payment', 'cost_frequency', 'cost_generated')
     def total_updater(self):
         """
            Update various fields related to totals based on the values in
@@ -235,8 +233,13 @@ class CarRentalContract(models.Model):
         tools_cost = 0.0
         for records in self.line_tools:
             tools_cost += records.price
+        #Calculate the value per day
+        if (self.rent_cost == 0):
+            n_days = (self.rent_end_date - self.rent_start_date).days
+            self.rent_cost = self.vehicle_id.cost_per_day * n_days
         self.tools_cost = tools_cost
         self.total_cost = self.first_payment + self.rent_cost + self.tools_cost + self.damage_cost
+        self.sent_quote = False
 
     def fleet_scheduler1(self, rent_date):
         """
@@ -253,11 +256,11 @@ class CarRentalContract(models.Model):
             managing recurring data, and sending email notifications.
         """
 
-        for record in self.search([]):
+        for record in self.search([('state', '=', 'running' )]):
             start_date = datetime.strptime(str(record.rent_start_date),
-                                           '%Y-%m-%d').date()
+                                           DATE_FORMAT).date()
             end_date = datetime.strptime(str(record.rent_end_date),
-                                         '%Y-%m-%d').date()
+                                         DATE_FORMAT).date()
             if end_date >= date.today():
                 temp = 0
                 if record.cost_frequency == 'daily':
@@ -269,11 +272,10 @@ class CarRentalContract(models.Model):
                 elif record.cost_frequency == 'monthly':
                     if start_date.day == date.today().day and start_date != date.today():
                         temp = 1
-                if temp == 1 and record.cost_frequency != "no" and record.state == "running":
+                if temp == 1 and record.cost_frequency != "no":
                     self._create_recurring_invoice(record)
             else:
-                if self.state == 'running':
-                    record.state = "checking"
+                record.state = "checking"
 
     def _create_recurring_invoice(self, record, invoice_date = date.today()):
 
@@ -415,6 +417,7 @@ class CarRentalContract(models.Model):
            raise UserError(
                 'Sorry This vehicle is already booked by another customer')
 
+        self.sent_quote=True
         quote_template = self.env.ref('fleet_rental.mail_template_quote')
         quote_template.send_mail(self.id, force_send=True)
 
@@ -455,7 +458,6 @@ class CarRentalContract(models.Model):
            fleet ID if it exists.
        """
         self.state = "cancel"
-#        self.vehicle_id.rental_check_availability = True
         if self.reserved_fleet_id:
             self.reserved_fleet_id.unlink()
 
@@ -616,29 +618,6 @@ class CarRentalContract(models.Model):
                 'date_to': self.rent_end_date,
             })
         self.read_only = False
-
-    @api.constrains('start_time', 'end_time', 'rent_start_date',
-                    'rent_end_date')
-    def validate_time(self):
-        """
-            Validate the time constraints for a rental agreement.
-
-            This method is used as a constraint to ensure that the specified
-            start and end times are valid, especially when renting by the hour.
-            If renting by the hour, it checks whether the end time is greater
-            than the start time when the rental start and end
-            dates are the same.
-
-            :raises ValidationError: If the time constraints are not met, a
-                                    validation error is raised with a relevant
-                                    error message.
-        """
-        if self.rent_by_hour:
-            start_time = datetime.strptime(self.start_time, "%H:%M").time()
-            end_time = datetime.strptime(self.end_time, "%H:%M").time()
-            if (self.rent_end_date == self.rent_start_date and
-                    end_time <= start_time):
-                raise ValidationError("Please choose a different end time")
 
     @api.constrains('rent_end_date')
     def validate_on_read_only(self):
