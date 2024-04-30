@@ -53,18 +53,22 @@ class CarRentalContract(models.Model):
                                  string="Vehicle",
                                  required=True,
                                  help="Vehicle")
-    car_brand = fields.Many2one('fleet.vehicle.model.brand',
-                                string="Fleet Brand",
-                                size=50,
-                                related='vehicle_id.model_id.brand_id',
-                                store=True,
-                                readonly=True)
-    car_color = fields.Char(string="Fleet Color",
-                            size=50,
-                            related='vehicle_id.color',
-                            store=True,
+    car_cost_per_day = fields.Float(string="Cost per day",
+                            related='vehicle_id.cost_per_day',
                             copy=False,
-                            default='#FFFFFF',
+                            readonly=True)
+    car_description = fields.Char(string="Car Description",
+                            related='vehicle_id.model_id.display_name',
+                            copy=False,
+                            readonly=True)
+    car_deposit = fields.Float(string="Car Deposit",
+                            help='Security deposit/Insuranse excess',
+                            related='vehicle_id.deposit',
+                            copy=False,
+                            readonly=True)
+    car_km_included_per_day = fields.Integer(string="Km(s) included",
+                            related='vehicle_id.km_included_per_day',
+                            copy=False,
                             readonly=True)
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
@@ -74,8 +78,6 @@ class CarRentalContract(models.Model):
                                   default=str(date.today()),
                                   help="Start date of contract",
                                   track_visibility='onchange')
-    start_time = fields.Char(string="Start By",
-                             help="Enter the contract starting hour")
     pickup_location = fields.Char(string="Pickup location",
                            help="Enter the pickup location",
                            required=True)
@@ -83,8 +85,6 @@ class CarRentalContract(models.Model):
                                 required=True,
                                 help="End date of contract",
                                 track_visibility='onchange')
-    end_time = fields.Char(string="End By",
-                           help="Enter the contract Ending hour")
     dropoff_location = fields.Char(string="Return location",
                            help="Enter the return location",
                            required=True)
@@ -128,13 +128,13 @@ class CarRentalContract(models.Model):
     first_invoice_created = fields.Boolean(string="First Invoice Created",
                                            invisible=True, copy=False)
     attachment_ids = fields.Many2many('ir.attachment',
-                                      'car_rental_checklist_ir_attachments_rel',
+                                      'car_rental_contract_ir_attachments_rel',
                                       'rental_id', 'attachment_id',
                                       string="Attachments",
                                       help="Images of the vehicle before "
                                            "contract/any attachments")
     line_tools = fields.One2many('car.rental.line.tools',
-                                     'checklist_number', string="Checklist",
+                                     'contract_id', string="Checklist",
                                      help="Facilities/Accessories, That should"
                                           " verify when closing the contract.")
     tools_cost = fields.Float(string="Total (Accessories/Tools)", readonly=True,
@@ -160,22 +160,31 @@ class CarRentalContract(models.Model):
     sent_quote = fields.Boolean(string="Quote sent",
                                 invisible=True, default=False, copy=False)
 
+    contract_days = fields.Integer(compute='_update_contract_days_count',
+                                string='Number of Contract days', copy=False)
+
     def action_run(self):
         """
             Set the state of the object to 'running'.
         """
         self.state = 'running'
 
-    @api.constrains('rent_start_date', 'rent_end_date')
-    def validate_dates(self):
-        """
-            Check the validity of the 'rent_start_date' and 'rent_end_date'
-            fields.
-            Raise a warning if 'rent_end_date' is earlier than
-            'rent_start_date'.
-        """
-        if self.rent_end_date < self.rent_start_date:
-            raise UserError("Please select the valid end date.")
+    @api.onchange('rent_start_date', 'rent_end_date')
+    def _onchange_start_date(self):
+        self._update_contract_days_count()
+        self._update_unit_tools()
+        self._update_rent_cost()
+        self.total_updater()
+
+    @api.onchange('vehicle_id')
+    def _onchange_vehicle(self):
+        self._update_rent_cost()
+        self.total_updater()
+    
+    @api.onchange('line_tools')
+    def _onchange_line_tools(self):
+       self._update_unit_tools()
+       self.total_updater()
 
     def set_to_done(self):
         """
@@ -210,6 +219,33 @@ class CarRentalContract(models.Model):
         """
         self.invoice_count = self.env['account.move'].search_count(
             [('fleet_rent_id', '=', self.id)])
+    
+    def _update_contract_days_count(self):
+        """
+            Check the validity of the 'rent_start_date' and 'rent_end_date'
+            fields. and calculate the number of days!
+            Raise a warning if 'rent_end_date' is earlier than
+            'rent_start_date'.
+        """
+        if self.rent_start_date and self.rent_end_date:
+            if self.rent_end_date < self.rent_start_date:
+                raise UserError("Please select the valid end date.")
+            self.contract_days = (self.rent_end_date - self.rent_start_date).days + 1
+        else: 
+            self.contract_days = 0
+
+    def _update_rent_cost(self):
+        if (self.contract_days <= 0) or (self.vehicle_id.cost_per_day <= 0):
+            self.rent_cost = 0
+        else:
+            self.rent_cost = self.vehicle_id.cost_per_day * self.contract_days
+
+    def _update_unit_tools(self):
+        for r in self.line_tools:
+            if r.unit == 'daily':
+                r.quantity = self.contract_days
+            elif r.unit == 'once':
+                r.quantity = 1
 
     @api.constrains('state')
     def state_changer(self):
@@ -230,14 +266,10 @@ class CarRentalContract(models.Model):
            Update various fields related to totals based on the values in
            'line_tools', 'damage_cost', 'first_payment', 'cost' and other relevant fields.
        """
-        tools_cost = 0.0
+        self._logger.info("Recalculate the values")
+        self.tools_cost = 0.0
         for records in self.line_tools:
-            tools_cost += records.price
-        #Calculate the value per day
-        if (self.rent_cost == 0):
-            n_days = (self.rent_end_date - self.rent_start_date).days
-            self.rent_cost = self.vehicle_id.cost_per_day * n_days
-        self.tools_cost = tools_cost
+            self.tools_cost += records.price * records.quantity
         self.total_cost = self.first_payment + self.rent_cost + self.tools_cost + self.damage_cost
         self.sent_quote = False
 

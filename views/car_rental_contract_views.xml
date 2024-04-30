@@ -96,13 +96,11 @@
                                    readonly="state != 'draft'"
                                    options="{'no_create': True}"/>
                             <field name="journal_type" invisible="1"/>
-                            <field name="sales_person"
-                                   readonly="state != 'draft'"/>
                         </group>
                         <group>
-                            <field name="car_brand"/>
-                            <field name="car_color"/>
                             <field name="company_id" readonly="state != 'draft'"/>
+                            <field name="sales_person"
+                                   readonly="state != 'draft'"/>
                             <field name="first_invoice_created" invisible="1"/>
                             <label for="first_payment"/>
                             <div>
@@ -111,19 +109,33 @@
                                 <field name="first_payment_inv" style="width:142px;" readonly="1"/>
                             </div>
                             <field name="account_type" invisible="1"/>
-                            <field name="rent_cost" readonly="state not in ['draft', 'running', 'checking']"/>
                             <label for="cost_generated"/>
                             <div>
                                 <field name="cost_frequency" class="oe_inline"
-                                       readonly="(state != 'draft')"/>
+                                readonly="(state != 'draft')"/>
                                 <field name="cost_generated" style="width:142px;"
-                                       invisible="cost_frequency == 'no'"
-                                       readonly="state != 'draft'"
-                                       required="cost_frequency not in [None, False , 'no']"/>
+                                invisible="cost_frequency == 'no'"
+                                readonly="state != 'draft'"
+                                required="cost_frequency not in [None, False , 'no']"/>
                             </div>
+                        </group>
+                        <group>
+                            <field name="attachment_ids"
+                                   widget="many2many_binary"
+                                   class="oe_inline"/>
                         </group>
                     </group>
                     <notebook>
+                        <page string="Vehicle contract" invisible="cost_frequency not in [None,False,'no']">
+                            <group>
+                                <field name="car_description"/>
+                                <field name="car_deposit"/>
+                                <field name="car_km_included_per_day"/>
+                                <field name="contract_days" />
+                                <field name="car_cost_per_day"/>
+                                <field name="rent_cost" readonly="state not in ['draft', 'running', 'checking']"/>
+                            </group>
+                        </page>
                         <page string="Recurring Invoices"
                               invisible="cost_frequency in [None,False,'no']">
                             <field name="recurring_line" mode="tree">
@@ -141,11 +153,7 @@
                         </page>
                         <page string="Accessories/Tools">
                             <group>
-                                <group>
-                                    <field name="attachment_ids"
-                                           widget="many2many_binary"
-                                           class="oe_inline"/>
-                                </group>
+
                                 <group>
                                     <field name="damage_cost"
                                            invisible="state != 'checking'"/>
@@ -155,6 +163,7 @@
                                 <tree string="Fleet Checklist Lines"
                                       editable="bottom">
                                     <field name="name"/>
+                                    <field name="quantity"/>
                                     <field name="unit" readonly="True"/>
                                     <field name="price"/>
                                 </tree>
@@ -166,15 +175,16 @@
                                     </sheet>
                                 </form>
                             </field>
-                            <div>
-                                <group class="oe_subtotal_footer oe_right">
-                                    <field name="tools_cost"/>
-                                    <field name="total_cost"
-                                           class="oe_subtotal_footer_separator"/>
-                                </group>
-                            </div>
+
                         </page>
                     </notebook>
+                    <div>
+                        <group class="oe_subtotal_footer oe_right">
+                            <field name="tools_cost"/>
+                            <field name="total_cost"
+                                   class="oe_subtotal_footer_separator"/>
+                        </group>
+                    </div>
                     <group>
                         <field name="notes"/>
                     </group>
@@ -197,8 +207,6 @@
                 <field name="customer_id" string="Customer"/>
                 <field name="vehicle_id"/>
                 <field name="cost_generated"/>
-                <field name="car_brand"/>
-                <field name="car_color"/>
                 <field name="rent_start_date"/>
                 <field name="rent_end_date"/>
                 <field name="state"/>

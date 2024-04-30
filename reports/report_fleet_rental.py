@@ -31,8 +31,6 @@ class FleetRentalReport(models.Model):
     name = fields.Char(string="Name")
     customer_id = fields.Many2one('res.partner')
     vehicle_id = fields.Many2one('fleet.vehicle')
-    car_brand = fields.Char(string="Car Brand")
-    car_color = fields.Char(string="Car Color")
     rent_cost = fields.Float(string="Rent Cost")
     rent_start_date = fields.Date(string="Rent Start Date")
     rent_end_date = fields.Date(string="Rent End Date")
@@ -56,10 +54,8 @@ class FleetRentalReport(models.Model):
                     (select 1 ) AS nbr,
                     t.id as id,
                     t.name as name,
-                    t.car_brand as car_brand,
                     t.customer_id as customer_id,
                     t.vehicle_id as vehicle_id,
-                    t.car_color as car_color,
                     t.rent_cost as cost,
                     t.rent_start_date as rent_start_date,
                     t.rent_end_date as rent_end_date,
@@ -79,10 +75,8 @@ class FleetRentalReport(models.Model):
                 GROUP BY
                     t.id,
                     name,
-                    car_brand,
                     customer_id,
                     vehicle_id,
-                    car_color,
                     rent_cost,
                     rent_start_date,
                     rent_end_date,

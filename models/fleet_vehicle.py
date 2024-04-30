@@ -41,12 +41,15 @@ class CarRentalFleetVehicle(models.Model):
                                  string='Fuel Type', help='Fuel Used by the vehicle')
     
     cost_per_day = fields.Float(string="Rent cost per day",
-                        help="This fields is to determine the cost of rent per day",
-                        required=True)
+                        help="This fields is to determine the cost of rent per day")
 
     deposit = fields.Float(string="Deposit value",
                         help="This fields is to determine the deposit value per day",
-                        required=True)
+                        default=0)
+    
+    km_included_per_day = fields.Integer(string="Km(s) included",
+                        help="The number of km included per day",
+                        default=0)
 
     _sql_constraints = [('vin_sn_unique', 'unique (vin_sn)',
                          "Chassis Number already exists !"),

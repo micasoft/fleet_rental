@@ -29,10 +29,14 @@ class CarRentalLineTools(models.Model):
     name = fields.Many2one('car.rental.tools', string="Name",
                            help='Select car tools')
 
-    checklist_number = fields.Many2one('car.rental.contract',
+    contract_id = fields.Many2one('car.rental.contract',
                                        string="Checklist Number",
                                        help='Number of checklist')
     
+    quantity = fields.Integer(string="Quantity",
+                         help='Quantity to be charged',
+                         default=1)
+ 
     unit = fields.Selection(related='name.unit', readonly=False)
     
     price = fields.Float(string="Price",

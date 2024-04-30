@@ -48,9 +48,6 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'fleet_rental/static/src/xml/timepicker.xml',
-            'fleet_rental/static/src/js/time_widget.js',
-            'fleet_rental/static/src/scss/timepicker.scss',
         ],
     },
     'images': ['static/description/banner.jpg'],

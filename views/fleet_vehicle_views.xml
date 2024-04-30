@@ -9,10 +9,28 @@
         <field name="inherit_id"
                ref="fleet.fleet_vehicle_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='location']"
-                   position="after">
-                <field name="cost_per_day"/>
-                <field name="deposit"/>
+            <xpath expr="//page[@name='page_tax_info']"
+                   position="before">
+                   <page string="Rental Managment" name="page_car_rental">
+                    <group>
+                       <group string="Details">
+                           <field name="deposit"/>
+                           <field name="km_included_per_day"/>
+                        </group>
+                        <group string="Costs">
+                           <field name="cost_per_day"/>
+                       </group>
+                       <group string="Reservations">
+                        <field name="rental_reserved_time" readonly="True">
+                            <tree string="Fleet Reservations Lines" default_order="date_to desc">
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="customer_id"/>
+                            </tree>
+                        </field>
+                       </group>
+                    </group>
+                   </page>
             </xpath>
         </field>
     </record>
