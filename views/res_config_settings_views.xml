@@ -18,8 +18,8 @@
                             <div class="o_setting_right_pane">
                                 <span class="o_form_label">Default Fleet Rental Service Product</span>
                                 <div class="text-muted content-group mt16">
-                                    <label for="fleet_service_product_id" class="col-lg-4 o_light_label"/>
-                                    <field name="fleet_service_product_id" class="oe_inline"/>
+                                    <label for="fleet_rental_service_product_id" class="col-lg-4 o_light_label"/>
+                                    <field name="fleet_rental_service_product_id" class="oe_inline"/>
                                 </div>
                                 <span class="o_form_label">E-mail settings</span>
                                 <div class="text-muted content-group mt16">
@@ -29,7 +29,12 @@
                                 <div class="text-muted content-group mt16">
                                     <label for="fleet_rental_send_recurring_reminder" class="col-lg-4 o_light_label"/>
                                     <field name="fleet_rental_send_recurring_reminder" class="oe_inline"/>
-                                </div>                                
+                                </div>    
+                                <span class="o_form_label">Other settings</span>
+                                <div class="text-muted content-group mt16">
+                                    <label for="fleet_rental_tolerance_delay" class="col-lg-4 o_light_label"/>
+                                    <field name="fleet_rental_tolerance_delay" class="oe_inline"/>
+                                </div>                         
                             </div>
                         </div>
                     </div>

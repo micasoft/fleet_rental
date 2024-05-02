@@ -32,10 +32,10 @@ class ResConfigSettings(models.TransientModel):
         """
         return self.env.ref('fleet_rental.fleet_service_product').id
 
-    fleet_service_product_id = fields.Many2one(
+    fleet_rental_service_product_id = fields.Many2one(
         'product.template',
         string="Product",
-        config_parameter='fleet_service_product_id',
+        config_parameter='fleet_rental_service_product_id',
         default=_get_default_product)
 
     fleet_rental_send_booking = fields.Boolean (
@@ -47,3 +47,9 @@ class ResConfigSettings(models.TransientModel):
         string="Recurring invoice",
         config_parameter='fleet_rental_send_recurring_reminder',
         help="Enable to send a e-mail about the recurring invoice")
+    
+    fleet_rental_tolerance_delay = fields.Integer (
+        string="Tolerance delay",
+        default=3,
+        config_parameter='fleet_rental_tolerance_delay',
+        help="The tolerance delay before count another day!")

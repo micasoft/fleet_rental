@@ -80,6 +80,7 @@
                         <separator string="Contract Details " colspan="4"/>
                         <group>
                             <field name="customer_id" string="Customer"
+                                   domain="[('customer_rank','>',0)]"
                                    readonly="state != 'draft'"/>
                             <field name="sent_quote" invisible="1"/>
                             <field name="read_only" invisible="1"/>
@@ -88,9 +89,9 @@
                             <field name="pickup_location"
                                    readonly="state != 'draft'"/>
                             <field name="rent_end_date"
-                                   readonly="((state not in ['draft']) and (read_only == False))"/>
+                                   readonly="((state not in ['draft', 'running']) and (read_only == False))"/>
                             <field name="dropoff_location"
-                                   readonly="state != 'draft'"/>                                   
+                                   readonly="state not in ['draft', 'running']"/>                                   
                             <field name="vehicle_id"
                                    domain="[('state_id.name','!=','Inactive')]"
                                    readonly="state != 'draft'"

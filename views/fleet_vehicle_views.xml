@@ -18,7 +18,22 @@
                            <field name="km_included_per_day"/>
                         </group>
                         <group string="Costs">
-                           <field name="cost_per_day"/>
+                            <field name="rental_cost">
+                                <tree string="Vehicle costs" editable="bottom">
+                                    <field name="day_from"/>
+                                    <field name="day_to"/>
+                                    <field name="cost_per_day"/>
+                                </tree>
+                                <form>
+                                    <sheet>
+                                        <group>
+                                            <field name="day_from"/>
+                                            <field name="day_to"/>
+                                            <field name="cost_per_day"/>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
                        </group>
                        <group string="Reservations">
                         <field name="rental_reserved_time" readonly="True">

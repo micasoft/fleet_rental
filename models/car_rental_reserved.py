@@ -35,4 +35,5 @@ class CarRentalReserved(models.Model):
                           help='Select the end date of rental')
     reserved_obj_id = fields.Many2one('fleet.vehicle',
                                       string='Reserved Object',
-                                      help='Reserved Object')
+                                      help='Reserved Object',
+                                      ondelete='cascade')

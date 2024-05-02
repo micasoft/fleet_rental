@@ -30,8 +30,12 @@ class CarRentalFleetVehicle(models.Model):
                                            'reserved_obj_id',
                                            string='Reserved Time',
                                            help='Reserved rental time',
-                                           ondelete='cascade',
                                            readonly=True)
+    
+    rental_cost = fields.One2many('car.rental.vehicle.cost',
+                                           'vehicle_id',
+                                           string='Rental Cost',
+                                           help='Vehicle range cost')
     
     fuel_type = fields.Selection(selection_add=[('gasoline', 'Gasoline'),
                                   ('diesel', 'Diesel'),
@@ -39,9 +43,6 @@ class CarRentalFleetVehicle(models.Model):
                                   ('hybrid', 'Hybrid'),
                                   ('petrol', 'Petrol')],
                                  string='Fuel Type', help='Fuel Used by the vehicle')
-    
-    cost_per_day = fields.Float(string="Rent cost per day",
-                        help="This fields is to determine the cost of rent per day")
 
     deposit = fields.Float(string="Deposit value",
                         help="This fields is to determine the deposit value per day",

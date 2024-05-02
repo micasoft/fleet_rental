@@ -26,5 +26,6 @@ from . import car_rental_tools
 from . import car_rental_line
 from . import car_rental_line_tools
 from . import car_rental_reserved
+from . import car_rental_vehicle_cost
 from . import fleet_vehicle
 from . import res_config_settings

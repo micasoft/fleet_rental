@@ -20,7 +20,6 @@
 #
 #############################################################################
 import logging
-import math
 
 from datetime import datetime, date, timedelta
 from odoo import api, fields, models, _
@@ -54,9 +53,7 @@ class CarRentalContract(models.Model):
                                  required=True,
                                  help="Vehicle")
     car_cost_per_day = fields.Float(string="Cost per day",
-                            related='vehicle_id.cost_per_day',
-                            copy=False,
-                            readonly=True)
+                            default=0)
     car_description = fields.Char(string="Car Description",
                             related='vehicle_id.model_id.display_name',
                             copy=False,
@@ -64,11 +61,11 @@ class CarRentalContract(models.Model):
     car_deposit = fields.Float(string="Car Deposit",
                             help='Security deposit/Insuranse excess',
                             related='vehicle_id.deposit',
-                            copy=False,
+                            copy=True,
                             readonly=True)
     car_km_included_per_day = fields.Integer(string="Km(s) included",
                             related='vehicle_id.km_included_per_day',
-                            copy=False,
+                            copy=True,
                             readonly=True)
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
@@ -76,36 +73,30 @@ class CarRentalContract(models.Model):
     rent_start_date = fields.Datetime(string="Rent Start Date",
                                   required=True,
                                   default=str(date.today()),
-                                  help="Start date of contract",
-                                  track_visibility='onchange')
+                                  help="Start date of contract")
     pickup_location = fields.Char(string="Pickup location",
                            help="Enter the pickup location",
                            required=True)
     rent_end_date = fields.Datetime(string="Rent End Date",
                                 required=True,
-                                help="End date of contract",
-                                track_visibility='onchange')
+                                help="End date of contract")
     dropoff_location = fields.Char(string="Return location",
                            help="Enter the return location",
                            required=True)
-
     state = fields.Selection(
         [('draft', 'Quote'), ('reserved', 'Reserved'), ('running', 'Running'),
          ('cancel', 'Cancel'),
          ('checking', 'Checking'), ('invoice', 'Invoice'), ('done', 'Done')],
         string="State", default="draft",
-        copy=False, track_visibility='onchange')
-
+        copy=False)
     notes = fields.Text(string="Details & Notes")
     
     cost_generated = fields.Float(string='Recurring Cost',
                                   help="Costs paid at regular intervals, depending on the cost frequency")
-    
     cost_frequency = fields.Selection(
         [('no', 'No'), ('daily', 'Daily'), ('weekly', 'Weekly'),
          ('monthly', 'Monthly')], string="Recurring Cost Frequency",
         help='Frequency of the recurring cost', default="no", required=True)
-    
     journal_type = fields.Many2one('account.journal', 'Journal',
                                    default=lambda self: self.env[
                                        'account.journal'].search(
@@ -122,7 +113,6 @@ class CarRentalContract(models.Model):
                                       "amount, must paid by customer side "
                                       "other "
                                       "than recurrent payments",
-                                 track_visibility='onchange',
                                  required=True)
     first_payment_inv = fields.Many2one('account.move', copy=False)
     first_invoice_created = fields.Boolean(string="First Invoice Created",
@@ -139,18 +129,13 @@ class CarRentalContract(models.Model):
                                           " verify when closing the contract.")
     tools_cost = fields.Float(string="Total (Accessories/Tools)", readonly=True,
                          copy=False)
-    
     damage_cost = fields.Float(string="Damage Cost / Balance Amount",
                                copy=False)
-    
     total_cost = fields.Float(string="Total", readonly=True, copy=False)
-    
     invoice_count = fields.Integer(compute='_invoice_count',
                                    string='# Invoice', copy=False)
-
     sales_person = fields.Many2one('res.users', string='Sales Person',
-                                   default=lambda self: self.env.uid,
-                                   track_visibility='always')
+                                   default=lambda self: self.env.uid)
     read_only = fields.Boolean(string="Read Only", help="To make field read "
                                                         "only")
     company_id = fields.Many2one('res.company', string='Company',
@@ -160,7 +145,7 @@ class CarRentalContract(models.Model):
     sent_quote = fields.Boolean(string="Quote sent",
                                 invisible=True, default=False, copy=False)
 
-    contract_days = fields.Integer(compute='_update_contract_days_count',
+    contract_days = fields.Integer(compute='_contract_days',
                                 string='Number of Contract days', copy=False)
 
     def action_run(self):
@@ -171,9 +156,14 @@ class CarRentalContract(models.Model):
 
     @api.onchange('rent_start_date', 'rent_end_date')
     def _onchange_start_date(self):
+        #if self.contract_days == 0:
+        #    self.rent_start_date =  self.rent_start_date.replace(hour=11)
+        #    self.rent_end_date =  self.rent_end_date.replace(hour=11)
+
         self._update_contract_days_count()
         self._update_unit_tools()
-        self._update_rent_cost()
+        if self.state == 'draft':
+            self._update_rent_cost()
         self.total_updater()
 
     @api.onchange('vehicle_id')
@@ -219,7 +209,18 @@ class CarRentalContract(models.Model):
         """
         self.invoice_count = self.env['account.move'].search_count(
             [('fleet_rent_id', '=', self.id)])
-    
+        
+    def _car_cost_per_day(self):
+        self.car_cost_per_day = 0
+        if self.vehicle_id and self.contract_days > 0:
+            for rc in self.vehicle_id.rental_cost:
+                self._logger.info(f"Cost per day [{rc.day_from} <= {self.contract_days} < {rc.day_to}] = {rc.cost_per_day}")
+                if rc.day_from <= self.contract_days <= rc.day_to:
+                    self.car_cost_per_day = rc.cost_per_day
+
+    def _contract_days(self):
+        self._update_contract_days_count()
+
     def _update_contract_days_count(self):
         """
             Check the validity of the 'rent_start_date' and 'rent_end_date'
@@ -227,18 +228,23 @@ class CarRentalContract(models.Model):
             Raise a warning if 'rent_end_date' is earlier than
             'rent_start_date'.
         """
+        self.contract_days = 0
         if self.rent_start_date and self.rent_end_date:
             if self.rent_end_date < self.rent_start_date:
                 raise UserError("Please select the valid end date.")
-            self.contract_days = (self.rent_end_date - self.rent_start_date).days + 1
-        else: 
-            self.contract_days = 0
+            self.contract_days = (self.rent_end_date 
+                                  - self.rent_start_date 
+                                  - timedelta(
+                                      hours=int(self.env['ir.config_parameter'].sudo().get_param('fleet_rental_tolerance_delay'))
+                                    )).days + 1
+        self._logger.info(f"update contract_days: {self.contract_days}")
 
     def _update_rent_cost(self):
-        if (self.contract_days <= 0) or (self.vehicle_id.cost_per_day <= 0):
+        self._car_cost_per_day()
+        if (self.contract_days <= 0) or (self.car_cost_per_day <= 0):
             self.rent_cost = 0
         else:
-            self.rent_cost = self.vehicle_id.cost_per_day * self.contract_days
+            self.rent_cost = self.car_cost_per_day * self.contract_days
 
     def _update_unit_tools(self):
         for r in self.line_tools:
@@ -260,7 +266,7 @@ class CarRentalContract(models.Model):
             state_id = self.env.ref('fleet_rental.vehicle_state_active').id
             self.vehicle_id.write({'state_id': state_id})
 
-    @api.constrains('line_tools', 'damage_cost', 'first_payment', 'cost_frequency', 'cost_generated')
+    @api.constrains('line_tools', 'damage_cost', 'first_payment', 'rent_cost')
     def total_updater(self):
         """
            Update various fields related to totals based on the values in
@@ -315,7 +321,7 @@ class CarRentalContract(models.Model):
         recurring_obj = self.env['car.rental.line']
         supplier = record.customer_id
         product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))], 
             limit=1)
         if product.property_account_income_id.id:
             income_account = product.property_account_income_id
@@ -374,7 +380,7 @@ class CarRentalContract(models.Model):
         self.reserved_fleet_id.unlink()
         #self.rent_end_date = fields.Date.today()
         product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))], 
             limit=1)
         if product.property_account_income_id.id:
             income_account = product.property_account_income_id
@@ -586,7 +592,7 @@ class CarRentalContract(models.Model):
         self.first_payment_inv = inv_id.id
 
         product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_service_product_id'))], 
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))], 
             limit=1)
 
         if product.property_account_income_id.id:
