@@ -1,0 +1,249 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* fleet_rental
+# 
+# Translators:
+# Jorge Carneiro, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: Jorge Carneiro, 2024\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: pt\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+
+
+#. module: fleet_rental
+#: model:ir.ui.menu,name:fleet_rental.menu_car_parent
+msgid "Rental Management"
+msgstr "Gestão de aluguer"
+
+#. module: fleet_rental
+#: model:ir.ui.menu,name:fleet_rental.menu_car_rental_contract
+msgid "Car Rental Contract(s)"
+msgstr "Contratos de aluguer"
+
+#. module: fleet_rental
+#: model:ir.actions.act_window,name:fleet_rental.action_car_rental_contract
+msgid "Rental Contract"
+msgstr "Contrato de aluguer"
+
+#. module: fleet_rental
+#: model:ir.ui.menu,name:fleet_rental.menu_car_tools
+#: model:ir.actions.act_window,name:fleet_rental.action_fleet_car_tools
+msgid "Accessories/Tools"
+msgstr "Extras/Acessórios"
+
+
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Contract Details"
+msgstr "Detalhes de contrato"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Vehicle contract"
+msgstr "Contrato da viatura"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Accessories/Tools"
+msgstr "Equipamento extra(s)"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Send quote"
+msgstr "Enviar orçamento"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Reserve"
+msgstr "Reservar"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Sart the renting"
+msgstr "Iniciar aluguer"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Create Invoice"
+msgstr "Criar Fatura"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Extend Rent"
+msgstr "Extender aluguer"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Confirm Extend"
+msgstr "Confirmar extensão"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Discard Extend"
+msgstr "Ignorar extensão"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Force Checking"
+msgstr "Forçar checkin"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Verify/Invoice"
+msgstr "Verificar/Faturar"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Set to Done"
+msgstr "Concluido"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__customer_id
+msgid "Customer"
+msgstr "Cliente"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__name
+msgid "Name"
+msgstr "Ref"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__vehicle_id
+msgid "Vehicle"
+msgstr "Viatura"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__car_cost_per_day
+msgid "Cost per day"
+msgstr "Custo por dia"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__car_description
+msgid "Car Description"
+msgstr "Descrição da viatura"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__car_deposit
+msgid "Car Deposit"
+msgstr "Caução"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__car_deposit
+msgid "Security deposit/Insuranse excess"
+msgstr "Caução com seguro incluido"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__car_km_included_per_day
+msgid "Km(s) included"
+msgstr "Km(s) incluidos"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__rent_cost
+msgid "Rent Cost"
+msgstr "Custo do aluguer"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__rent_cost
+msgid "This fields is to determine the cost of rent"
+msgstr "Valor do custo do aluguer"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__rent_start_date
+msgid "Rent Start Date"
+msgstr "Inicio do contrato"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__rent_start_date
+msgid "Start date of contract"
+msgstr "Data de inicio do contrato"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__pickup_location
+msgid "Pickup location"
+msgstr "Local de entrega"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__rent_end_date
+msgid "Rent End Date"
+msgstr "Fim do contrato"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__rent_end_date
+msgid "End date of contract"
+msgstr "Data de fim do contrato"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__dropoff_location
+msgid "Return location"
+msgstr "Local de recolha"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__state
+msgid "State"
+msgstr "Estado"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__draft
+msgid "Quote"
+msgstr "Orçamento"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__reserved
+msgid "Reserved"
+msgstr "Reservado"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__running
+msgid "Running"
+msgstr "Em curso"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__cancel
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__checking
+msgid "Checking"
+msgstr "Verificar"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__invoice
+msgid "Invoice"
+msgstr "Facturação"
+
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__done
+msgid "Done"
+msgstr "Concluido"
+
+
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Quote Contract"
+msgstr "Orçamento"
+
+
+
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__customer_id
+msgid "Customer"
+msgstr "Cliente que reserva a viatura"

@@ -46,12 +46,10 @@ class CarRentalContract(models.Model):
                        copy=False)
     customer_id = fields.Many2one('res.partner',
                                   required=True,
-                                  string='Customer',
-                                  help="Customer")
+                                  string='Customer')
     vehicle_id = fields.Many2one('fleet.vehicle',
                                  string="Vehicle",
-                                 required=True,
-                                 help="Vehicle")
+                                 required=True)
     car_cost_per_day = fields.Float(string="Cost per day",
                             default=0)
     car_description = fields.Char(string="Car Description",
@@ -75,13 +73,11 @@ class CarRentalContract(models.Model):
                                   default=str(date.today()),
                                   help="Start date of contract")
     pickup_location = fields.Char(string="Pickup location",
-                           help="Enter the pickup location",
                            required=True)
     rent_end_date = fields.Datetime(string="Rent End Date",
                                 required=True,
                                 help="End date of contract")
     dropoff_location = fields.Char(string="Return location",
-                           help="Enter the return location",
                            required=True)
     state = fields.Selection(
         [('draft', 'Quote'), ('reserved', 'Reserved'), ('running', 'Running'),
@@ -314,6 +310,31 @@ class CarRentalContract(models.Model):
                     self._create_recurring_invoice(record)
             else:
                 record.state = "checking"
+
+    @api.model
+    def next_event(self):
+        """
+            Notify the seller about the next day events
+        """
+        next_day = date.today() + timedelta(days=1)
+        next_events_template = self.env.ref('fleet_rental.mail_template_next_events')
+        self._logger.info("starting....")
+        for record in self.search([('state', '=', 'reserved' )]):
+            start_date = datetime.strptime(str(record.rent_start_date),
+                                           DATE_FORMAT).date()
+            self._logger.info(f"{start_date} == {next_day}")
+            if start_date == next_day:
+                next_events_template.send_mail(record.id)
+                self._logger.info("sent")
+
+            if start_date > date.today():
+                self.action_run()
+        
+        for record in self.search([('state', '=', 'running' )]):
+            end_date = datetime.strptime(str(record.rent_end_date),
+                                         DATE_FORMAT).date()
+            if end_date == next_day:
+                next_events_template.send_mail(record.id)
 
     def _create_recurring_invoice(self, record, invoice_date = date.today()):
 
