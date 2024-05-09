@@ -210,7 +210,7 @@ class CarRentalContract(models.Model):
         self.car_cost_per_day = 0
         if self.vehicle_id and self.contract_days > 0:
             for rc in self.vehicle_id.rental_cost:
-                self._logger.info(f"Cost per day [{rc.day_from} <= {self.contract_days} < {rc.day_to}] = {rc.cost_per_day}")
+                self._logger.debug(f"Cost per day [{rc.day_from} <= {self.contract_days} < {rc.day_to}] = {rc.cost_per_day}")
                 if rc.day_from <= self.contract_days <= rc.day_to:
                     self.car_cost_per_day = rc.cost_per_day
 
@@ -233,7 +233,7 @@ class CarRentalContract(models.Model):
                                   - timedelta(
                                       hours=int(self.env['ir.config_parameter'].sudo().get_param('fleet_rental_tolerance_delay'))
                                     )).days + 1
-        self._logger.info(f"update contract_days: {self.contract_days}")
+        self._logger.debug(f"update contract_days: {self.contract_days}")
 
     def _update_rent_cost(self):
         self._car_cost_per_day()
@@ -268,7 +268,7 @@ class CarRentalContract(models.Model):
            Update various fields related to totals based on the values in
            'line_tools', 'damage_cost', 'first_payment', 'cost' and other relevant fields.
        """
-        self._logger.info("Recalculate the values")
+        self._logger.debug("Recalculate the values")
         self.tools_cost = 0.0
         for records in self.line_tools:
             self.tools_cost += records.price * records.quantity
@@ -318,14 +318,11 @@ class CarRentalContract(models.Model):
         """
         next_day = date.today() + timedelta(days=1)
         next_events_template = self.env.ref('fleet_rental.mail_template_next_events')
-        self._logger.info("starting....")
         for record in self.search([('state', '=', 'reserved' )]):
             start_date = datetime.strptime(str(record.rent_start_date),
                                            DATE_FORMAT).date()
-            self._logger.info(f"{start_date} == {next_day}")
             if start_date == next_day:
                 next_events_template.send_mail(record.id)
-                self._logger.info("sent")
 
             if start_date > date.today():
                 self.action_run()

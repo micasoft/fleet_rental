@@ -38,6 +38,12 @@ msgstr "Contrato de aluguer"
 msgid "Accessories/Tools"
 msgstr "Extras/Acessórios"
 
+#. module: fleet_rental
+#: model:ir.ui.menu,name:fleet_rental.menu_fleet_rental_analysis
+#: model:ir.actions.act_window,name:fleet_rental.action_fleet_rental_analysis
+msgid "Fleet Rental Analysis"
+msgstr "Análise de alugueres"
+
 
 
 #. module: fleet_rental
@@ -225,25 +231,190 @@ msgstr "Verificar"
 msgid "Invoice"
 msgstr "Facturação"
 
-
 #. module: fleet_rental
 #: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__state__done
 msgid "Done"
 msgstr "Concluido"
 
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__notes
+msgid "Details & Notes"
+msgstr "Observações"
 
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__cost_generated
+msgid "Recurring Cost"
+msgstr "Custo recorrente"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__cost_generated
+msgid "Costs paid at regular intervals, depending on the cost frequency"
+msgstr "Custo recorrente, depende do frequencia de pagamento"
+
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__cost_frequency
+msgid "Recurring Cost Frequency"
+msgstr "Frequência do custo"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__cost_frequency
+msgid "Frequency of the recurring cost"
+msgstr "Frequência do custo de pagamento"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__cost_frequency__no
+msgid "No"
+msgstr "Nenhum"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__cost_frequency__daily
+msgid "Daily"
+msgstr "Diario"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__cost_frequency__weekly
+msgid "Weekly"
+msgstr "Semanal"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_contract__cost_frequency__monthly
+msgid "Monthly"
+msgstr "Mensal"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__first_payment
+msgid "First Payment"
+msgstr "Pagamento inicial"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__first_payment
+msgid ""
+"Transaction/Office/Contract charge "
+"amount, must paid by customer side "
+"other "
+"than recurrent payments"
+msgstr ""
+"Valor inicial a cobrar pelo contrato, "
+"deve ser pago pelo cliente para além dos "
+"outros valores de aluguer"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__attachment_ids
+msgid "Attachments"
+msgstr "Anexo(s)"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__attachment_ids
+msgid ""
+"Images of the vehicle before "
+"contract/any attachments"
+msgstr ""
+"Imagens da viatura antes"
+"do contrato/outros documentos"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__tools_cost
+msgid "Total (Accessories/Tools)"
+msgstr "Valor extra(s)"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__damage_cost
+msgid "Damage Cost / Balance Amount"
+msgstr "Custo de estragos"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__sales_person
+msgid "Sales Person"
+msgstr "Comercial"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__company_id
+msgid "Company"
+msgstr "Empresa"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__company_id
+msgid "Company this record owns"
+msgstr "Empresa que gere este aluguer"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__contract_days
+msgid "Number of Contract days"
+msgstr "Num. de dias de contrato"
 
 #. module: fleet_rental
 #. odoo-python
 #: code:addons/fleet_rental/models/car_rental_contract.py:0
 #, python-format
-msgid "Quote Contract"
-msgstr "Orçamento"
-
-
-
+msgid "Some Invoices are pending"
+msgstr "Algumas faturas estão pendentes"
 
 #. module: fleet_rental
-#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__customer_id
-msgid "Customer"
-msgstr "Cliente que reserva a viatura"
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Sorry This vehicle is already booked by another customer"
+msgstr ""
+"Desculpe!!"
+"Este veiculo já está reservado para outro cliente!"
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Some Invoices are pending"
+msgstr "Algumas faturas estão pendentes"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_line_tools__name
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_tools__name
+msgid "Name"
+msgstr "Nome"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_line_tools__name
+msgid "Select car tools"
+msgstr "Selecione o extra"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_line_tools__quantity
+msgid "Quantity"
+msgstr "Quantidade"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_line_tools__price
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_tools__price
+msgid "Price"
+msgstr "Preço"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_line_tools__price
+msgid "Price of the car tool"
+msgstr "Preço do extra"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_tools__name
+msgid "Name of the car rental tool"
+msgstr "Nome do extra"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_tools__price
+msgid "Price of the car rental tool"
+msgstr "Preço do extra"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_line_tools__unit
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_tools__unit
+msgid "Charge"
+msgstr "Cobrar"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_tools__unit__once
+msgid "Once"
+msgstr "1 vez"
+
+#. module: fleet_rental
+#: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_tools__unit__daily
+msgid "Daily"
+msgstr "Diario"

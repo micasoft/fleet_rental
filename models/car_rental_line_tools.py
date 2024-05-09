@@ -34,8 +34,7 @@ class CarRentalLineTools(models.Model):
                                        help='Number of checklist')
     
     quantity = fields.Integer(string="Quantity",
-                         help='Quantity to be charged',
-                         default=1)
+                        default=1)
  
     unit = fields.Selection(related='name.unit', readonly=False)
     
