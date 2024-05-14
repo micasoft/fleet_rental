@@ -117,6 +117,11 @@ msgid "Set to Done"
 msgstr "Concluido"
 
 #. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Invoice"
+msgstr "Fatura(s)"
+
+#. module: fleet_rental
 #: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__customer_id
 msgid "Customer"
 msgstr "Cliente"
@@ -418,3 +423,174 @@ msgstr "1 vez"
 #: model:ir.model.fields.selection,name:fleet_rental.selection__car_rental_tools__unit__daily
 msgid "Daily"
 msgstr "Diario"
+
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_reserved__customer_id
+msgid "Customer"
+msgstr "Cliente"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_reserved__date_from
+msgid "Reserved Date From"
+msgstr "de"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_reserved__date_to
+msgid "Reserved Date To"
+msgstr "até"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_reserved__reserved_obj_id
+msgid "Reserved Object"
+msgstr "Reservado"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_reserved__customer_id
+msgid "Cliente"
+msgstr ""
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_reserved__date_from
+msgid "Data de inicio do aluguer"
+msgstr ""
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_reserved__date_to
+msgid "Select the end date of rental"
+msgstr "Data final do aluguer"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_reserved__reserved_obj_id
+msgid "Reserved Object"
+msgstr "Reservado"
+
+#. module: fleet_rental
+#: model:ir.model,name:fleet_rental.model_car_rental_reserved
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__rental_reserved_time
+msgid "Reserved Time"
+msgstr "Período reservado"
+
+#. module: fleet_rental
+#: model:ir.model,name:fleet_rental.model_car_rental_vehicle_cost
+msgid "Vehicle range cost"
+msgstr "Veiculo valores"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_vehicle_cost__vehicle_id
+msgid "Vehicle"
+msgstr "Veiculo"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_vehicle_cost__day_from
+msgid "From day"
+msgstr "de"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_vehicle_cost__day_to
+msgid "To day"
+msgstr "até"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_vehicle_cost__cost_per_day
+msgid "Rent cost per day"
+msgstr "Valor por dia"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_vehicle_cost__vehicle_id
+msgid "Vehicle"
+msgstr "Veiculo"
+
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__rental_cost
+msgid "Rental Cost"
+msgstr "Custo de aluguer"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__fuel_type
+msgid "Fuel Type"
+msgstr "Tipo de combustivel"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__deposit
+msgid "Deposit value"
+msgstr "Valor da caução"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__km_included_per_day
+msgid "Km(s) included"
+msgstr "Km(s) incluidos"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.fleet_vehicle_view_form
+#: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
+msgid "Rental Management"
+msgstr "Gestão de alugueres"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.fleet_vehicle_view_form
+msgid "Details"
+msgstr "Detalhes"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.fleet_vehicle_view_form
+msgid "Costs"
+msgstr "Custos"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.fleet_vehicle_view_form
+msgid "Reservations"
+msgstr "Reserva(s)"
+
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_config_settings__fleet_rental_service_product_id
+msgid "Product"
+msgstr "Produto"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_config_settings__fleet_rental_send_booking
+msgid "Booking reserved"
+msgstr "Reserva efetuada"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_res_config_settings__fleet_rental_send_booking
+msgid "Enable to send a e-mail when the booking is reserved"
+msgstr "Quando ativo, envia um email quando a reserva é confirmada"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_config_settings__fleet_rental_send_recurring_reminder
+msgid "Recurring invoice"
+msgstr "Faturação recurrente"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_res_config_settings__fleet_rental_send_recurring_reminder
+msgid "Enable to send a e-mail about the recurring invoice"
+msgstr "Quando ativo, envia um e-mail sempre que existe uma fatura recurrente"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_config_settings__fleet_rental_tolerance_delay
+msgid "Tolerance delay"
+msgstr "Tempo de tolerância"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_res_config_settings__fleet_rental_tolerance_delay
+msgid "The tolerance delay before count another day!"
+msgstr "A tolerância em horas até contar um novo dia!"
+
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
+msgid "Default Fleet Rental Service Product"
+msgstr "Produto por omissão para o serviço de aluguer"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
+msgid "E-mail settings"
+msgstr "Definições de e-mail"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
+msgid "Other settings"
+msgstr "Outras definições"

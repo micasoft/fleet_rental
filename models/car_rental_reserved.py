@@ -30,7 +30,7 @@ class CarRentalReserved(models.Model):
                                   string='Customer',
                                   help='Select customer')
     date_from = fields.Datetime(string='Reserved Date From',
-                            help='Select the start date of rental ')
+                            help='Select the start date of rental')
     date_to = fields.Datetime(string='Reserved Date To',
                           help='Select the end date of rental')
     reserved_obj_id = fields.Many2one('fleet.vehicle',

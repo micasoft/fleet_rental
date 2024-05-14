@@ -11,7 +11,7 @@
         <field name="arch" type="xml">
             <xpath expr="//page[@name='page_tax_info']"
                    position="before">
-                   <page string="Rental Managment" name="page_car_rental">
+                   <page string="Rental Management" name="page_car_rental">
                     <group>
                        <group string="Details">
                            <field name="deposit"/>
