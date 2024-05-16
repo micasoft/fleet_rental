@@ -701,3 +701,8 @@ class CarRentalContract(models.Model):
         """
         self.read_only = False
         self.rent_end_date = self.reserved_fleet_id.date_to
+
+    def unlink(self):
+        if self.reserved_fleet_id:
+            self.reserved_fleet_id.unlink()
+        return super().unlink()
