@@ -289,13 +289,17 @@ class CarRentalContract(models.Model):
             Perform fleet scheduling operations, including creating invoices,
             managing recurring data, and sending email notifications.
         """
+        for record in self.search([('state', 'in', ['reserved', 'running'])]):
 
-        for record in self.search([('state', '=', 'running' )]):
             start_date = datetime.strptime(str(record.rent_start_date),
                                            DATE_FORMAT).date()
+            
             end_date = datetime.strptime(str(record.rent_end_date),
                                          DATE_FORMAT).date()
-            if end_date >= date.today():
+            if start_date <= date.today() and record.state == 'reserved': 
+                self._logger.info(f"{record.id} moved to running")
+                record.state = "running"
+            if end_date >= date.today() and record.state == 'running':
                 temp = 0
                 if record.cost_frequency == 'daily':
                     temp = 1
@@ -309,6 +313,7 @@ class CarRentalContract(models.Model):
                 if temp == 1 and record.cost_frequency != "no":
                     self._create_recurring_invoice(record)
             else:
+                self._logger.info(f"{record.id} moved to checking")
                 record.state = "checking"
 
     @api.model
