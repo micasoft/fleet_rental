@@ -22,24 +22,24 @@
             </form>
         </field>
     </record>
-<!--    Car tools tree view-->
-    <record id="car_tools_view_tree" model="ir.ui.view">
-        <field name="name">car.rental.tools.view.tree</field>
+<!--    Car tools list view-->
+    <record id="car_tools_view_list" model="ir.ui.view">
+        <field name="name">car.rental.tools.view.list</field>
         <field name="model">car.rental.tools</field>
-        <field name="type">tree</field>
+        <field name="type">list</field>
         <field name="arch" type="xml">
-            <tree string="Accessories/Tools">
+            <list string="Accessories/Tools">
                 <field name="name"/>
                 <field name="unit" />
                 <field name="price"/>
-            </tree>
+            </list>
         </field>
     </record>
 <!--    Action for car tools-->
     <record id="action_fleet_car_tools" model="ir.actions.act_window">
         <field name="name">Accessories/Tools</field>
         <field name="res_model">car.rental.tools</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <menuitem id="menu_car_tools" parent="menu_car_parent" name="Accessories/Tools"

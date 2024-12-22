@@ -19,11 +19,11 @@
                         </group>
                         <group string="Costs">
                             <field name="rental_cost">
-                                <tree string="Vehicle costs" editable="bottom">
+                                <list string="Vehicle costs" editable="bottom">
                                     <field name="day_from"/>
                                     <field name="day_to"/>
                                     <field name="cost_per_day"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <sheet>
                                         <group>
@@ -37,11 +37,11 @@
                        </group>
                        <group string="Reservations">
                         <field name="rental_reserved_time" readonly="True">
-                            <tree string="Fleet Reservations Lines" default_order="date_to desc">
+                            <list string="Fleet Reservations Lines" default_order="date_to desc">
                                 <field name="date_from"/>
                                 <field name="date_to"/>
                                 <field name="customer_id"/>
-                            </tree>
+                            </list>
                         </field>
                        </group>
                     </group>

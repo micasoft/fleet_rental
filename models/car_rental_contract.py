@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #############################################################################
 #
 #    Cybrosys Technologies Pvt. Ltd.
@@ -561,7 +560,7 @@ class CarRentalContract(models.Model):
                 value = {
                     'domain': [('fleet_rent_id', '=', self.id)],
                     'view_type': 'form',
-                    'view_mode': 'tree,form',
+                    'view_mode': 'list,form',
                     'res_model': 'account.move',
                     'view_id': False,
                     'type': 'ir.actions.act_window',

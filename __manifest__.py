@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #############################################################################
 #
 #    Cybrosys Technologies Pvt. Ltd.
@@ -21,7 +20,7 @@
 #############################################################################
 {
     'name': 'Fleet Rental Management',
-    'version': '17.0.1.0.0',
+    'version': "18.0.0.0.0",
     'category': "Extra Tools",
     'summary': """This module will helps you to give the vehicles for Rent.""",
     'description': """This module is an application for Vehicle Rental System which helps in managing the rental of vehicles like car,van,bike, jeep etc.

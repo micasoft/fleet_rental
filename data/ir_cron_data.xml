@@ -9,8 +9,6 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="interval_number">1</field>
         <field name="interval_type">days</field>
-        <field name="numbercall">-1</field>
-        <field name="doall" eval="False"/>
     </record>
     <record id="cron_next_event_for_fleet" model="ir.cron">
         <field name="name">Car Rental: Notify next events!</field>
@@ -21,7 +19,5 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="interval_number">1</field>
         <field name="interval_type">days</field>
-        <field name="numbercall">-1</field>
-        <field name="doall" eval="False"/>
     </record>
 </odoo>
