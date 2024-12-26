@@ -37,7 +37,6 @@ class CarRentalContract(models.Model):
                           string="Image of Vehicle")
     
     reserved_fleet_id = fields.Many2one('car.rental.reserved',
-                                        #invisible=True,
                                         copy=False)
     name = fields.Char(string="Name",
                        default="Quote Contract",
@@ -72,7 +71,6 @@ class CarRentalContract(models.Model):
                                   default=str(date.today()),
                                   help="Start date of contract")
     calendar_start_date_id = fields.Many2one('calendar.event',
-                                        #invisible=True,
                                         copy=False)
     pickup_location = fields.Char(string="Pickup location",
                            required=True)
@@ -80,7 +78,6 @@ class CarRentalContract(models.Model):
                                 required=True,
                                 help="End date of contract")
     calendar_end_date_id = fields.Many2one('calendar.event',
-                                        #invisible=True,
                                         copy=False)
     dropoff_location = fields.Char(string="Return location",
                            required=True)
@@ -117,7 +114,6 @@ class CarRentalContract(models.Model):
                                  required=True)
     first_payment_inv = fields.Many2one('account.move', copy=False)
     first_invoice_created = fields.Boolean(string="First Invoice Created",
-                                           #invisible=True, 
                                            copy=False)
     attachment_ids = fields.Many2many('ir.attachment',
                                       'car_rental_contract_ir_attachments_rel',
@@ -145,21 +141,22 @@ class CarRentalContract(models.Model):
                                  help="Company this record owns")
     
     sent_quote = fields.Boolean(string="Quote sent",
-                                #invisible=True, 
                                 default=False, copy=False)
 
     contract_days = fields.Integer(compute='_contract_days',
                                 string='Number of Contract days', copy=False)
 
-    handle_pickup = fields.Many2one('res.users', string='Handle Pickup',
-                                   default=lambda self: self.env.uid)
+    handle_pickup = fields.Many2one('res.users', 
+                                    string='Handle Pickup',
+                                    help="Person in charge of handle the pick up",
+                                    default=lambda self: self.env.uid)
 
-    handle_dropoff = fields.Many2one('res.users', string='Handle Drop off',
-                                   default=lambda self: self.env.uid)
+    handle_dropoff = fields.Many2one('res.users', 
+                                     string='Handle Drop off',
+                                     help="Person in charge of handle the drop off",
+                                     default=lambda self: self.env.uid)
     
 
-    #def _valid_field_parameter(self, field, name):
-    #    return name == 'invisible' or super()._valid_field_parameter(field, name)
 
     def action_run(self):
         """
@@ -750,7 +747,7 @@ class CarRentalContract(models.Model):
             self._logger.debug("Sync Calendar_start criteria are met!")
             calendar_start_date_val = {
                     'user_id': self.sales_person.id,
-                    'duration': 3,
+                    'duration': 2,
                     'name': f'Pick off : {self.vehicle_id.name}',
                     'location': self.pickup_location,
                     'start': self.rent_start_date - timedelta(hours=2),
@@ -765,10 +762,10 @@ class CarRentalContract(models.Model):
             
             if not self.calendar_start_date_id.id:
                 self.calendar_start_date_id = self.env['calendar.event'].create(calendar_start_date_val)
-                self._logger.debug("Sync Calendar Start create event")
+                self._logger.debug("Sync Calendar_start create event")
             else:
                 self.calendar_start_date_id.write(calendar_start_date_val)
-                self._logger.debug("Sync Calendar Start update event")
+                self._logger.debug("Sync Calendar_start update event")
 
     def sync_calendar_end(self):
         self._logger.debug("Sync Calendar End")
@@ -776,7 +773,7 @@ class CarRentalContract(models.Model):
             self._logger.debug("Sync Calendar_end criteria are met!")
             calendar_end_date_val = {
                     'user_id': self.sales_person.id,
-                    'duration': 3,
+                    'duration': 2,
                     'name': f'Drop off : {self.vehicle_id.name}',
                     'location': self.pickup_location,
                     'start': self.rent_end_date - timedelta(hours=2),
@@ -791,7 +788,7 @@ class CarRentalContract(models.Model):
 
             if not self.calendar_end_date_id.id:
                 self.calendar_end_date_id= self.env['calendar.event'].create(calendar_end_date_val)
-                self._logger.debug("Sync Calendar End create event")
+                self._logger.debug("Sync Calendar_end create event")
             else:
                 self.calendar_end_date_id.write(calendar_end_date_val)
-                self._logger.debug("Sync Calendar End update event")
+                self._logger.debug("Sync Calendar_end update event")

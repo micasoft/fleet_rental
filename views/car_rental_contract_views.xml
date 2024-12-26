@@ -102,9 +102,9 @@
                             <field name="sales_person"
                                    readonly="state != 'draft'"/>
                             <field name="handle_pickup"
-                                   readonly="((state not in ['draft', 'running']) and (read_only == False))"/>
+                                   readonly="((state not in ['draft', 'reserved']) and (read_only == False))"/>
                             <field name="handle_dropoff"
-                                   readonly="((state not in ['draft']) and (read_only == False))"/>
+                                   readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"/>
                             <field name="first_invoice_created" invisible="1"/>
                             <label for="first_payment"/>
                             <div>

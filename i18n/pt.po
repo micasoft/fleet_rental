@@ -634,3 +634,23 @@ msgstr "Levantar : "
 #, python-format
 msgid "Drop off : "
 msgstr "Entregar : "
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__handle_pickup
+msgid "Handle Pickup"
+msgstr "Levantar"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__handle_dropoff
+msgid "Handle Drop off"
+msgstr "Entregar"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__handle_pickup
+msgid "Person in charge of handle the pick up"
+msgstr "Responsavel pelo levantamento da viatura"
+
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__handle_dropoff
+msgid "Person in charge of handle the drop off"
+msgstr "Responsavel pela entrega da viatura"
