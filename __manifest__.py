@@ -31,7 +31,7 @@
     'company': 'micasoft',
     'maintainer': 'micasoft',
     'website': "https://github.com/micasoft/fleet_rental",
-    'depends': ['account', 'fleet', 'mail'],
+    'depends': ['account', 'fleet', 'mail', 'calendar'],
     'data': [
         'security/fleet_rental_groups.xml',
         'security/fleet_rental_security.xml',

@@ -34,7 +34,11 @@
                                 <div class="text-muted content-group mt16">
                                     <label for="fleet_rental_tolerance_delay" class="col-lg-4 o_light_label"/>
                                     <field name="fleet_rental_tolerance_delay" class="oe_inline"/>
-                                </div>                         
+                                </div>
+                                <div class="text-muted content-group mt16">
+                                    <label for="fleet_rental_calendar_sync" class="col-lg-4 o_light_label"/>
+                                    <field name="fleet_rental_calendar_sync" class="oe_inline"/>
+                                </div>
                             </div>
                         </div>
                     </div>

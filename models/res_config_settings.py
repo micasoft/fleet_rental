@@ -52,3 +52,9 @@ class ResConfigSettings(models.TransientModel):
         default=3,
         config_parameter='fleet_rental_tolerance_delay',
         help="The tolerance delay before count another day!")
+
+    fleet_rental_calendar_sync = fields.Boolean (
+        string="Calendar integration",
+        default=False,
+        config_parameter='fleet_rental_calendar_sync',
+        help="The rents are synced with Odoo calendar for better support")

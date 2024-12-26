@@ -71,11 +71,17 @@ class CarRentalContract(models.Model):
                                   required=True,
                                   default=str(date.today()),
                                   help="Start date of contract")
+    calendar_start_date_id = fields.Many2one('calendar.event',
+                                        invisible=True,
+                                        copy=False)
     pickup_location = fields.Char(string="Pickup location",
                            required=True)
     rent_end_date = fields.Datetime(string="Rent End Date",
                                 required=True,
                                 help="End date of contract")
+    calendar_end_date_id = fields.Many2one('calendar.event',
+                                        invisible=True,
+                                        copy=False)
     dropoff_location = fields.Char(string="Return location",
                            required=True)
     state = fields.Selection(
@@ -142,6 +148,12 @@ class CarRentalContract(models.Model):
 
     contract_days = fields.Integer(compute='_contract_days',
                                 string='Number of Contract days', copy=False)
+
+    handle_pickup = fields.Many2one('res.users', string='Handle Pickup',
+                                   default=lambda self: self.env.uid)
+
+    handle_dropoff = fields.Many2one('res.users', string='Handle Drop off',
+                                   default=lambda self: self.env.uid)
 
     def action_run(self):
         """
@@ -254,12 +266,19 @@ class CarRentalContract(models.Model):
             Handle state transitions and update the 'state_id' of the
             associated vehicle based on the value of the 'state' field.
         """
+
+        if self.state == "reserved":
+            self.sync_calendar_start()
+            self.sync_calendar_end()
+
         if self.state == "running":
+            self.sync_calendar_end()
             state_id = self.env.ref('fleet_rental.vehicle_state_rent').id
             self.vehicle_id.write({'state_id': state_id})
         elif self.state in ("cancel", "invoice"):
             state_id = self.env.ref('fleet_rental.vehicle_state_active').id
             self.vehicle_id.write({'state_id': state_id})
+
 
     @api.constrains('line_tools', 'damage_cost', 'first_payment', 'rent_cost')
     def total_updater(self):
@@ -710,3 +729,63 @@ class CarRentalContract(models.Model):
         if self.reserved_fleet_id:
             self.reserved_fleet_id.unlink()
         return super().unlink()
+
+    @api.constrains('handle_pickup')
+    def handle_pickup_updater(self):
+        self.sync_calendar_start()
+
+    @api.constrains('handle_dropoff')
+    def handle_dropoff_updater(self):
+        self.sync_calendar_end()
+
+    def sync_calendar_start(self):
+        self._logger.debug("Sync Calendar Start")
+        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
+            self._logger.debug("Sync Calendar_start criteria are met!")
+            calendar_start_date_val = {
+                    'user_id': self.sales_person.id,
+                    'duration': 3,
+                    'name': f'Pick off : {self.vehicle_id.name}',
+                    'location': self.pickup_location,
+                    'start': self.rent_start_date - timedelta(hours=2),
+                    'stop': self.rent_start_date,
+                    'partner_ids': (self.sales_person.partner_id.id, self.handle_pickup.partner_id.id),
+                    'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
+                        <p><span>Customer : {self.customer_id.name}</span></p>
+                        <p><span>Phone : {self.customer_id.phone}</span></p>
+                        <p><span>Mobile : {self.customer_id.mobile}</span></p>
+                        <p><span>Pick up : {self.pickup_location} at {self.rent_start_date}</span></p>'''
+                }
+            
+            if not self.calendar_start_date_id.id:
+                self.calendar_start_date_id = self.env['calendar.event'].create(calendar_start_date_val)
+                self._logger.debug("Sync Calendar Start create event")
+            else:
+                self.calendar_start_date_id.write(calendar_start_date_val)
+                self._logger.debug("Sync Calendar Start update event")
+
+    def sync_calendar_end(self):
+        self._logger.debug("Sync Calendar End")
+        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
+            self._logger.debug("Sync Calendar_end criteria are met!")
+            calendar_end_date_val = {
+                    'user_id': self.sales_person.id,
+                    'duration': 3,
+                    'name': f'Drop off : {self.vehicle_id.name}',
+                    'location': self.pickup_location,
+                    'start': self.rent_end_date - timedelta(hours=2),
+                    'stop': self.rent_end_date,
+                    'partner_ids': (self.sales_person.partner_id.id, self.handle_dropoff.partner_id.id),
+                    'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
+                            <p><span>Customer : {self.customer_id.name}</span></p>
+                            <p><span>Phone : {self.customer_id.phone}</span></p>
+                            <p><span>Mobile : {self.customer_id.mobile}</span></p>
+                            <p><span>Drop off : {self.dropoff_location} ({self.rent_end_date})</span></p>'''
+                }
+
+            if not self.calendar_end_date_id.id:
+                self.calendar_end_date_id= self.env['calendar.event'].create(calendar_end_date_val)
+                self._logger.debug("Sync Calendar End create event")
+            else:
+                self.calendar_end_date_id.write(calendar_end_date_val)
+                self._logger.debug("Sync Calendar End update event")

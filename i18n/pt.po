@@ -579,6 +579,11 @@ msgstr "Tempo de tolerância"
 msgid "The tolerance delay before count another day!"
 msgstr "A tolerância em horas até contar um novo dia!"
 
+#. module: fleet_rental
+#: model:ir.model.fields,help:fleet_rental.field_res_config_settings__fleet_rental_calendar_sync
+msgid "The rents are synced with Odoo calendar for better support"
+msgstr "Os contratos de aluguer são sincronizados com o calendario Odoo"
+
 
 #. module: fleet_rental
 #: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
@@ -594,3 +599,38 @@ msgstr "Definições de e-mail"
 #: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
 msgid "Other settings"
 msgstr "Outras definições"
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Vehicle : "
+msgstr "Viatura : "
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Phone : "
+msgstr "Telefone : "
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Mobile : "
+msgstr "Telemóvel : "
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Pick up : "
+msgstr "Levantar : "
+
+#. module: fleet_rental
+#. odoo-python
+#: code:addons/fleet_rental/models/car_rental_contract.py:0
+#, python-format
+msgid "Drop off : "
+msgstr "Entregar : "
