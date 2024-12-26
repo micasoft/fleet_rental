@@ -37,7 +37,7 @@ class CarRentalContract(models.Model):
                           string="Image of Vehicle")
     
     reserved_fleet_id = fields.Many2one('car.rental.reserved',
-                                        invisible=True,
+                                        #invisible=True,
                                         copy=False)
     name = fields.Char(string="Name",
                        default="Quote Contract",
@@ -72,7 +72,7 @@ class CarRentalContract(models.Model):
                                   default=str(date.today()),
                                   help="Start date of contract")
     calendar_start_date_id = fields.Many2one('calendar.event',
-                                        invisible=True,
+                                        #invisible=True,
                                         copy=False)
     pickup_location = fields.Char(string="Pickup location",
                            required=True)
@@ -80,7 +80,7 @@ class CarRentalContract(models.Model):
                                 required=True,
                                 help="End date of contract")
     calendar_end_date_id = fields.Many2one('calendar.event',
-                                        invisible=True,
+                                        #invisible=True,
                                         copy=False)
     dropoff_location = fields.Char(string="Return location",
                            required=True)
@@ -117,7 +117,8 @@ class CarRentalContract(models.Model):
                                  required=True)
     first_payment_inv = fields.Many2one('account.move', copy=False)
     first_invoice_created = fields.Boolean(string="First Invoice Created",
-                                           invisible=True, copy=False)
+                                           #invisible=True, 
+                                           copy=False)
     attachment_ids = fields.Many2many('ir.attachment',
                                       'car_rental_contract_ir_attachments_rel',
                                       'rental_id', 'attachment_id',
@@ -144,7 +145,8 @@ class CarRentalContract(models.Model):
                                  help="Company this record owns")
     
     sent_quote = fields.Boolean(string="Quote sent",
-                                invisible=True, default=False, copy=False)
+                                #invisible=True, 
+                                default=False, copy=False)
 
     contract_days = fields.Integer(compute='_contract_days',
                                 string='Number of Contract days', copy=False)
@@ -154,6 +156,10 @@ class CarRentalContract(models.Model):
 
     handle_dropoff = fields.Many2one('res.users', string='Handle Drop off',
                                    default=lambda self: self.env.uid)
+    
+
+    #def _valid_field_parameter(self, field, name):
+    #    return name == 'invisible' or super()._valid_field_parameter(field, name)
 
     def action_run(self):
         """

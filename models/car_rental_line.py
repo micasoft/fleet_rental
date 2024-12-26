@@ -23,6 +23,7 @@ from odoo import fields, models
 
 class CarRentalLine(models.Model):
     _name = 'car.rental.line'
+    _description = 'Car rental line model'
 
     name = fields.Char(string='Description', help='Name')
     date_today = fields.Date(string='Date', help='Today date')

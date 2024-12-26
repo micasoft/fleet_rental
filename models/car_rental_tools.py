@@ -24,6 +24,7 @@ from odoo import fields, models
 class CarRentalTools(models.Model):
     """Model to add the tools for the car"""
     _name = 'car.rental.tools'
+    _description = 'Car rental tools model'
 
     name = fields.Char(string="Name", help='Name of the car rental tool')
 

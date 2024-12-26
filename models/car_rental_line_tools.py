@@ -24,6 +24,7 @@ from odoo import api, fields, models
 class CarRentalLineTools(models.Model):
     """Model to add the line tools of rental"""
     _name = 'car.rental.line.tools'
+    _description = 'Car rental line tools model'
 
     name = fields.Many2one('car.rental.tools', string="Name",
                            help='Select car tools')
