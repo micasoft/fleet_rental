@@ -80,6 +80,7 @@
                         <separator string="Contract Details" colspan="4"/>
                         <group>
                             <field name="customer_id" string="Customer"
+                                   domain="[('active','=', True)]"
                                    readonly="state != 'draft'"/>
                             <field name="sent_quote" invisible="1"/>
                             <field name="read_only" invisible="1"/>
@@ -112,7 +113,6 @@
                                        readonly="((state not in ['draft', 'running']))"/>
                                 <field name="first_payment_inv" style="width:142px;" readonly="1"/>
                             </div>
-                            <field name="account_type" invisible="1"/>
                             <label for="cost_generated"/>
                             <div>
                                 <field name="cost_frequency" class="oe_inline"

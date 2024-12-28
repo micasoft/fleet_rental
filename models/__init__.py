@@ -28,3 +28,4 @@ from . import car_rental_reserved
 from . import car_rental_vehicle_cost
 from . import fleet_vehicle
 from . import res_config_settings
+from . import res_partner

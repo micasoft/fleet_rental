@@ -72,6 +72,8 @@ class CarRentalContract(models.Model):
                                   help="Start date of contract")
     calendar_start_date_id = fields.Many2one('calendar.event',
                                         copy=False)
+    calendar_start_date_hash = fields.Char(string="Calendar end data hash",
+                            readonly=True)
     pickup_location = fields.Char(string="Pickup location",
                            required=True)
     rent_end_date = fields.Datetime(string="Rent End Date",
@@ -79,6 +81,8 @@ class CarRentalContract(models.Model):
                                 help="End date of contract")
     calendar_end_date_id = fields.Many2one('calendar.event',
                                         copy=False)
+    calendar_end_date_hash = fields.Char(string="Calendar end data hash",
+                            readonly=True)
     dropoff_location = fields.Char(string="Return location",
                            required=True)
     state = fields.Selection(
@@ -99,10 +103,6 @@ class CarRentalContract(models.Model):
                                    default=lambda self: self.env[
                                        'account.journal'].search(
                                        [('id', '=', 1)]))
-    account_type = fields.Many2one('account.account', 'Account',
-                                   default=lambda self: self.env[
-                                       'account.account'].search(
-                                       [('id', '=', 17)]))
     recurring_line = fields.One2many('car.rental.line', 'rental_number',
                                      readonly=True, help="Recurring Invoices",
                                      copy=False)
@@ -380,12 +380,12 @@ class CarRentalContract(models.Model):
         inv_data = {
             'ref': supplier.name,
             'partner_id': supplier.id,
-            'currency_id': record.account_type.company_id.currency_id.id,
+            'currency_id': record.company_id.currency_id.id,
             'journal_id': record.journal_type.id,
             'invoice_origin': record.name,
             'fleet_rent_id': record.id,
             'invoice_date': invoice_date,
-            'company_id': record.account_type.company_id.id,
+            'company_id': record.company_id.id,
             'invoice_payment_term_id': None,
             'invoice_date_due': record.rent_end_date,
             'move_type': 'out_invoice',
@@ -471,11 +471,11 @@ class CarRentalContract(models.Model):
                 'ref': supplier.name,
                 'move_type': 'out_invoice',
                 'partner_id': supplier.id,
-                'currency_id': self.account_type.company_id.currency_id.id,
+                'currency_id': self.company_id.currency_id.id,
                 'journal_id': self.journal_type.id,
                 'invoice_origin': self.name,
                 'fleet_rent_id': self.id,
-                'company_id': self.account_type.company_id.id,
+                'company_id': self.company_id.id,
                 'invoice_date_due': self.rent_end_date,
                 'invoice_line_ids': inv_lines
             }
@@ -624,11 +624,11 @@ class CarRentalContract(models.Model):
             'ref': supplier.name,
             'move_type': 'out_invoice',
             'partner_id': supplier.id,
-            'currency_id': self.account_type.company_id.currency_id.id,
+            'currency_id': self.company_id.currency_id.id,
             'journal_id': self.journal_type.id,
             'invoice_origin': self.name,
             'fleet_rent_id': self.id,
-            'company_id': self.account_type.company_id.id,
+            'company_id': self.company_id.id,
             'invoice_date_due': self.rent_end_date,
             'is_first_invoice': True,
         }
@@ -748,10 +748,11 @@ class CarRentalContract(models.Model):
             calendar_start_date_val = {
                     'user_id': self.sales_person.id,
                     'duration': 2,
-                    'name': f'Pick off : {self.vehicle_id.name}',
+                    'name': f'Pick up : {self.vehicle_id.name}',
                     'location': self.pickup_location,
                     'start': self.rent_start_date - timedelta(hours=2),
                     'stop': self.rent_start_date,
+                    'allday': False,
                     'partner_ids': (self.sales_person.partner_id.id, self.handle_pickup.partner_id.id),
                     'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
                         <p><span>Customer : {self.customer_id.name}</span></p>
@@ -759,12 +760,21 @@ class CarRentalContract(models.Model):
                         <p><span>Mobile : {self.customer_id.mobile}</span></p>
                         <p><span>Pick up : {self.pickup_location} at {self.rent_start_date}</span></p>'''
                 }
-            
+            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
+                                 self.pickup_location, 
+                                 self.rent_start_date, 
+                                 self.sales_person.partner_id.id, 
+                                 self.handle_pickup.partner_id.id,
+                                 self.customer_id.name,
+                                 self.customer_id.phone,
+                                 self.customer_id.mobile))
             if not self.calendar_start_date_id.id:
                 self.calendar_start_date_id = self.env['calendar.event'].create(calendar_start_date_val)
+                self.calendar_start_date_hash = ch
                 self._logger.debug("Sync Calendar_start create event")
-            else:
+            elif self.calendar_start_date_hash != ch:
                 self.calendar_start_date_id.write(calendar_start_date_val)
+                self.calendar_start_date_hash = ch
                 self._logger.debug("Sync Calendar_start update event")
 
     def sync_calendar_end(self):
@@ -778,6 +788,7 @@ class CarRentalContract(models.Model):
                     'location': self.pickup_location,
                     'start': self.rent_end_date - timedelta(hours=2),
                     'stop': self.rent_end_date,
+                    'allday': False,
                     'partner_ids': (self.sales_person.partner_id.id, self.handle_dropoff.partner_id.id),
                     'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
                             <p><span>Customer : {self.customer_id.name}</span></p>
@@ -785,10 +796,19 @@ class CarRentalContract(models.Model):
                             <p><span>Mobile : {self.customer_id.mobile}</span></p>
                             <p><span>Drop off : {self.dropoff_location} ({self.rent_end_date})</span></p>'''
                 }
-
+            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
+                        self.dropoff_location, 
+                        self.rent_end_date, 
+                        self.sales_person.partner_id.id, 
+                        self.handle_dropoff.partner_id.id,
+                        self.customer_id.name,
+                        self.customer_id.phone,
+                        self.customer_id.mobile))
             if not self.calendar_end_date_id.id:
                 self.calendar_end_date_id= self.env['calendar.event'].create(calendar_end_date_val)
+                self.calendar_end_date_hash = ch
                 self._logger.debug("Sync Calendar_end create event")
-            else:
+            elif self.calendar_end_date_hash != ch:
                 self.calendar_end_date_id.write(calendar_end_date_val)
+                self.calendar_end_date_hash = ch
                 self._logger.debug("Sync Calendar_end update event")
