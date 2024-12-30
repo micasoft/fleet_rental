@@ -336,6 +336,10 @@ class CarRentalContract(models.Model):
             else:
                 self._logger.info(f"{record.id} moved to checking")
                 record.state = "checking"
+            #Close the day
+            if record.state == 'record': 
+                self._logger.info(f"{record.id} moved to done")
+                record.state = "done"
 
     @api.model
     def next_event(self):
