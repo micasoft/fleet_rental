@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--    Inherited view for Partner-->
+    <record id="view_partner_form" model="ir.ui.view">
+        <field name="name">view.partner.form.inherit.fleet.rental</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='internal_notes']" position="after">
+                <page name='fleet_car_rental' string="Car Rental Management" invisible="is_company">
+                    <group string="Car Rental Settings" name="car_rental" priority="1">
+                        <field name="employee" />
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+
+
+                       

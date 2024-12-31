@@ -20,7 +20,7 @@
 #############################################################################
 {
     'name': 'Fleet Rental Management',
-    'version': "18.0.0.0.0",
+    'version': "18.0.1.0.0",
     'category': "Extra Tools",
     'summary': """This module will helps you to give the vehicles for Rent.""",
     'description': """This module is an application for Vehicle Rental System which helps in managing the rental of vehicles like car,van,bike, jeep etc.
@@ -31,7 +31,7 @@
     'company': 'micasoft',
     'maintainer': 'micasoft',
     'website': "https://github.com/micasoft/fleet_rental",
-    'depends': ['account', 'fleet', 'mail', 'contacts', 'calendar'],
+    'depends': ['base', 'account', 'fleet', 'mail', 'contacts', 'calendar'],
     'data': [
         'security/fleet_rental_groups.xml',
         'security/fleet_rental_security.xml',
@@ -42,6 +42,7 @@
         'views/car_rental_contract_views.xml',
         'views/car_tools_views.xml',
         'views/res_config_settings_views.xml',
+        'views/res_partner_views.xml',
         'views/fleet_vehicle_views.xml',
         'reports/report_fleet_rental.xml',
     ],
@@ -52,6 +53,6 @@
     'images': ['static/description/banner.jpg'],
     'license': 'AGPL-3',
     'installable': True,
-    'auto_install': False,
-    'application': False,
+    'application': True,
+    'auto_install': False
 }

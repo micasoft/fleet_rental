@@ -101,11 +101,14 @@
                         <group>
                             <field name="company_id" readonly="state != 'draft'"/>
                             <field name="sales_person"
-                                   readonly="state != 'draft'"/>
+                                   readonly="state != 'draft'"
+                                   domain="[('employee','=', True)]"/>
                             <field name="handle_pickup"
-                                   readonly="((state not in ['draft', 'reserved']) and (read_only == False))"/>
+                                   readonly="((state not in ['draft', 'reserved']) and (read_only == False))"
+                                   domain="[('employee','=', True)]"/>
                             <field name="handle_dropoff"
-                                   readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"/>
+                                   readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"
+                                   domain="[('employee','=', True)]"/>
                             <field name="first_invoice_created" invisible="1"/>
                             <label for="first_payment"/>
                             <div>
