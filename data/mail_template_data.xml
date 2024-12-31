@@ -52,7 +52,7 @@
                         If you wish to book, we will need you to send us a copy of your driving license, passport and residence address
                         <br /><br />
                         Regards<br />
-                        <t t-out="object.sales_person.signature or ''">--<br />Mitchell Admin</t>
+                        <t t-out="object.sales_person.name or ''">--<br />Mitchell Admin</t>
                     </div>
                 </td></tr>
                 <tr><td style="text-align:center;">
@@ -117,7 +117,7 @@
                         Any doubt please contact us!
                         <br /><br />
                         Regards<br />
-                        <t t-out="object.sales_person.signature or ''">--<br />Mitchell Admin</t>
+                        <t t-out="object.sales_person.name or ''">--<br />Mitchell Admin</t>
                     </div>
                 </td></tr>
                 <tr><td style="text-align:center;">
@@ -173,7 +173,7 @@
         Responsible Person <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
         Do not hesitate to contact us if you have any questions.
         <br /><br />
-        <t t-out="object.sales_person.signature or ''">--<br/>Mitchell Admin</t>
+        <t t-out="object.sales_person.name or ''">--<br/>Mitchell Admin</t>
     </p>
 </div>
         </field>

@@ -30,8 +30,8 @@ class CarRentalContract(models.Model):
     _logger = logging.getLogger(__name__)
     
     _name = 'car.rental.contract'
-    _inherit = 'mail.thread'
-    _description = 'Fleet Rental Management'
+    _inherit = ['mail.thread']
+    _description = 'Fleet Rental Contract'
 
     image = fields.Binary(related='vehicle_id.image_128',
                           string="Image of Vehicle")
@@ -47,9 +47,11 @@ class CarRentalContract(models.Model):
                                   string='Customer')
     vehicle_id = fields.Many2one('fleet.vehicle',
                                  string="Vehicle",
-                                 required=True)
+                                 required=True,
+                                 tracking=True)
     car_cost_per_day = fields.Float(string="Cost per day",
-                            default=0)
+                            default=0,
+                            tracking=True)
     car_description = fields.Char(string="Car Description",
                             related='vehicle_id.model_id.display_name',
                             copy=False,
@@ -65,7 +67,8 @@ class CarRentalContract(models.Model):
                             readonly=True)
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
-                        required=True)
+                        required=True,
+                        tracking=True)
     rent_start_date = fields.Datetime(string="Rent Start Date",
                                   required=True,
                                   default=str(date.today()),
@@ -78,7 +81,8 @@ class CarRentalContract(models.Model):
                            required=True)
     rent_end_date = fields.Datetime(string="Rent End Date",
                                 required=True,
-                                help="End date of contract")
+                                help="End date of contract",
+                                tracking=True)
     calendar_end_date_id = fields.Many2one('calendar.event',
                                         copy=False)
     calendar_end_date_hash = fields.Char(string="Calendar end data hash",
@@ -90,7 +94,8 @@ class CarRentalContract(models.Model):
          ('cancel', 'Cancel'),
          ('checking', 'Checking'), ('invoice', 'Invoice'), ('done', 'Done')],
         string="State", default="draft",
-        copy=False)
+        copy=False,
+        tracking=True)
     notes = fields.Text(string="Details & Notes")
     
     cost_generated = fields.Float(string='Recurring Cost',
@@ -132,8 +137,9 @@ class CarRentalContract(models.Model):
     total_cost = fields.Float(string="Total", readonly=True, copy=False)
     invoice_count = fields.Integer(compute='_invoice_count',
                                    string='# Invoice', copy=False)
-    sales_person = fields.Many2one('res.users', string='Sales Person',
-                                   default=lambda self: self.env.uid)
+    sales_person = fields.Many2one('res.partner', string='Sales Person',
+                                   default=lambda self: self.env.user.partner_id.id)
+
     read_only = fields.Boolean(string="Read Only", help="To make field read "
                                                         "only")
     company_id = fields.Many2one('res.company', string='Company',
@@ -146,15 +152,15 @@ class CarRentalContract(models.Model):
     contract_days = fields.Integer(compute='_contract_days',
                                 string='Number of Contract days', copy=False)
 
-    handle_pickup = fields.Many2one('res.users', 
+    handle_pickup = fields.Many2one('res.partner',
                                     string='Handle Pickup',
                                     help="Person in charge of handle the pick up",
-                                    default=lambda self: self.env.uid)
+                                    default=lambda self: self.env.user.partner_id.id)
 
-    handle_dropoff = fields.Many2one('res.users', 
+    handle_dropoff = fields.Many2one('res.partner',
                                      string='Handle Drop off',
                                      help="Person in charge of handle the drop off",
-                                     default=lambda self: self.env.uid)
+                                     default=lambda self: self.env.user.partner_id.id)
     
 
 
@@ -317,9 +323,7 @@ class CarRentalContract(models.Model):
             
             end_date = datetime.strptime(str(record.rent_end_date),
                                          DATE_FORMAT).date()
-            if start_date <= date.today() and record.state == 'reserved': 
-                self._logger.info(f"{record.id} moved to running")
-                record.state = "running"
+
             if end_date >= date.today() and record.state == 'running':
                 temp = 0
                 if record.cost_frequency == 'daily':
@@ -333,9 +337,13 @@ class CarRentalContract(models.Model):
                         temp = 1
                 if temp == 1 and record.cost_frequency != "no":
                     self._create_recurring_invoice(record)
-            else:
+            elif end_date <= date.today() and record.state == 'running':
                 self._logger.info(f"{record.id} moved to checking")
                 record.state = "checking"
+
+            if start_date <= date.today() and record.state == 'reserved':
+                self._logger.info(f"{record.id} moved to running")
+                record.state = "running"
             #Close the day
             if record.state == 'record': 
                 self._logger.info(f"{record.id} moved to done")
@@ -750,14 +758,13 @@ class CarRentalContract(models.Model):
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
             self._logger.debug("Sync Calendar_start criteria are met!")
             calendar_start_date_val = {
-                    'user_id': self.sales_person.id,
                     'duration': 2,
                     'name': f'Pick up : {self.vehicle_id.name}',
                     'location': self.pickup_location,
                     'start': self.rent_start_date - timedelta(hours=2),
                     'stop': self.rent_start_date,
                     'allday': False,
-                    'partner_ids': (self.sales_person.partner_id.id, self.handle_pickup.partner_id.id),
+                    'partner_ids': (self.sales_person.id, self.handle_pickup.id),
                     'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
                         <p><span>Customer : {self.customer_id.name}</span></p>
                         <p><span>Phone : {self.customer_id.phone}</span></p>
@@ -767,8 +774,8 @@ class CarRentalContract(models.Model):
             ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
                                  self.pickup_location, 
                                  self.rent_start_date, 
-                                 self.sales_person.partner_id.id, 
-                                 self.handle_pickup.partner_id.id,
+                                 self.sales_person.id,
+                                 self.handle_pickup.id,
                                  self.customer_id.name,
                                  self.customer_id.phone,
                                  self.customer_id.mobile))
@@ -786,14 +793,13 @@ class CarRentalContract(models.Model):
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
             self._logger.debug("Sync Calendar_end criteria are met!")
             calendar_end_date_val = {
-                    'user_id': self.sales_person.id,
                     'duration': 2,
                     'name': f'Drop off : {self.vehicle_id.name}',
                     'location': self.pickup_location,
                     'start': self.rent_end_date - timedelta(hours=2),
                     'stop': self.rent_end_date,
                     'allday': False,
-                    'partner_ids': (self.sales_person.partner_id.id, self.handle_dropoff.partner_id.id),
+                    'partner_ids': (self.sales_person.id, self.handle_dropoff.id),
                     'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
                             <p><span>Customer : {self.customer_id.name}</span></p>
                             <p><span>Phone : {self.customer_id.phone}</span></p>
@@ -803,8 +809,8 @@ class CarRentalContract(models.Model):
             ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
                         self.dropoff_location, 
                         self.rent_end_date, 
-                        self.sales_person.partner_id.id, 
-                        self.handle_dropoff.partner_id.id,
+                        self.sales_person.id,
+                        self.handle_dropoff.id,
                         self.customer_id.name,
                         self.customer_id.phone,
                         self.customer_id.mobile))

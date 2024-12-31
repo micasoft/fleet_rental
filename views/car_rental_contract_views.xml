@@ -193,6 +193,7 @@
                         <field name="notes"/>
                     </group>
                 </sheet>
+                <!-- Chatter -->
                 <chatter/>
             </form>
         </field>
