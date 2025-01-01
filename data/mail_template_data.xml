@@ -185,7 +185,7 @@
         <field name="model_id" 
             ref="fleet_rental.model_car_rental_contract" />
         <field name="subject">Next events for {{object.name}}!</field>
-        <field name="partner_to">{{ object.sales_person.partner_id.id }}</field>
+        <field name="partner_to">{{ object.sales_person.id }}</field>
         <field name="body_html" type="html">
 <div style="margin: 0px; padding: 0px;">
     <p style="margin: 0px; padding: 0px; font-size: 13px;">
@@ -195,7 +195,7 @@
         <b>Please find the details below:</b><br/>
         Pick up <t t-out="object.rent_start_date or ''">01-01-2024</t> at <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
         Drop off <t t-out="object.rent_end_date or ''">31-01-2024</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
-        Vehicle <t t-out="object.car_description or ''">Mercedez-benz CLS</t><br/>
+        Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-benz CLS</t><br/>
         <t t-if="len(object.line_tools) > 0">
         <b>Acessories:</b><br/>
         <ul>
@@ -204,7 +204,6 @@
         </t>
         </ul>
         </t>
-        
     </p>
 </div>
         </field>
