@@ -136,11 +136,11 @@
                         <page string="Vehicle contract" invisible="cost_frequency not in [None,False,'no']">
                             <group>
                                 <field name="car_description"/>
-                                <field name="car_deposit"/>
-                                <field name="car_km_included_per_day"/>
+                                <field name="car_deposit" readonly="state not in ['draft', 'reserved']"/>
+                                <field name="car_km_included_per_day" readonly="state not in ['draft', 'reserved']"/>
                                 <field name="contract_days" />
-                                <field name="car_cost_per_day" readonly="True"/>
-                                <field name="rent_cost" readonly="state not in ['draft', 'running', 'checking']"/>
+                                <field name="car_cost_per_day" readonly="state not in ['draft', 'reserved', 'running', 'checking']" />
+                                <field name="rent_cost"/>
                             </group>
                         </page>
                         <page string="Recurring Invoices"

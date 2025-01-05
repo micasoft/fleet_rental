@@ -51,7 +51,8 @@ class CarRentalContract(models.Model):
                                  tracking=True)
     car_cost_per_day = fields.Float(string="Cost per day",
                             default=0,
-                            tracking=True)
+                            tracking=True,
+                            store=True)
     car_description = fields.Char(string="Car Description",
                             related='vehicle_id.model_id.display_name',
                             copy=False,
@@ -59,12 +60,10 @@ class CarRentalContract(models.Model):
     car_deposit = fields.Float(string="Car Deposit",
                             help='Security deposit/Insuranse excess',
                             related='vehicle_id.deposit',
-                            copy=True,
-                            readonly=True)
+                            store=True)
     car_km_included_per_day = fields.Integer(string="Km(s) included",
                             related='vehicle_id.km_included_per_day',
-                            copy=True,
-                            readonly=True)
+                            store=True)
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
                         required=True,
@@ -181,11 +180,6 @@ class CarRentalContract(models.Model):
         if self.state == 'draft':
             self._update_rent_cost()
         self.total_updater()
-
-    @api.onchange('vehicle_id')
-    def _onchange_vehicle(self):
-        self._update_rent_cost()
-        self.total_updater()
     
     @api.onchange('line_tools')
     def _onchange_line_tools(self):
@@ -225,7 +219,8 @@ class CarRentalContract(models.Model):
         """
         self.invoice_count = self.env['account.move'].search_count(
             [('fleet_rent_id', '=', self.id)])
-        
+
+    @api.onchange('vehicle_id', 'contract_days')
     def _car_cost_per_day(self):
         self.car_cost_per_day = 0
         if self.vehicle_id and self.contract_days > 0:
@@ -233,6 +228,7 @@ class CarRentalContract(models.Model):
                 self._logger.debug(f"Cost per day [{rc.day_from} <= {self.contract_days} < {rc.day_to}] = {rc.cost_per_day}")
                 if rc.day_from <= self.contract_days <= rc.day_to:
                     self.car_cost_per_day = rc.cost_per_day
+        self.total_updater()
 
     def _contract_days(self):
         self._update_contract_days_count()
@@ -255,8 +251,8 @@ class CarRentalContract(models.Model):
                                     )).days + 1
         self._logger.debug(f"update contract_days: {self.contract_days}")
 
+    @api.onchange('car_cost_per_day', 'contract_days')
     def _update_rent_cost(self):
-        self._car_cost_per_day()
         if (self.contract_days <= 0) or (self.car_cost_per_day <= 0):
             self.rent_cost = 0
         else:
@@ -289,7 +285,7 @@ class CarRentalContract(models.Model):
             self.vehicle_id.write({'state_id': state_id})
 
 
-    @api.constrains('line_tools', 'damage_cost', 'first_payment', 'rent_cost')
+    @api.constrains('line_tools', 'damage_cost', 'rent_cost')
     def total_updater(self):
         """
            Update various fields related to totals based on the values in
@@ -299,7 +295,7 @@ class CarRentalContract(models.Model):
         self.tools_cost = 0.0
         for records in self.line_tools:
             self.tools_cost += records.price * records.quantity
-        self.total_cost = self.first_payment + self.rent_cost + self.tools_cost + self.damage_cost
+        self.total_cost = self.rent_cost + self.tools_cost + self.damage_cost
         self.sent_quote = False
 
     def fleet_scheduler1(self, rent_date):
@@ -455,7 +451,7 @@ class CarRentalContract(models.Model):
                 inv_lines.append((0, 0, {
                         'name': self.vehicle_id.name,
                         'account_id': income_account.id,
-                        'price_unit': self.rent_cost,
+                        'price_unit': self.rent_cost - self.first_payment,
                         'quantity': 1,
                         'product_id': product.id,
                     }))
