@@ -196,6 +196,7 @@
         Pick up <t t-out="object.rent_start_date or ''">01-01-2024</t> at <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
         Drop off <t t-out="object.rent_end_date or ''">31-01-2024</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
         Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-benz CLS</t><br/>
+        Deposit <t t-out="object.car_deposit or ''">2000</t><br/>
         <t t-if="len(object.line_tools) > 0">
         <b>Acessories:</b><br/>
         <ul>
@@ -204,6 +205,7 @@
         </t>
         </ul>
         </t>
+        Notes <t t-out="object.notes or ''"></t><br/>
     </p>
 </div>
         </field>

@@ -761,11 +761,10 @@ class CarRentalContract(models.Model):
                     'stop': self.rent_start_date,
                     'allday': False,
                     'partner_ids': (self.sales_person.id, self.handle_pickup.id),
-                    'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
-                        <p><span>Customer : {self.customer_id.name}</span></p>
-                        <p><span>Phone : {self.customer_id.phone}</span></p>
-                        <p><span>Mobile : {self.customer_id.mobile}</span></p>
-                        <p><span>Pick up : {self.pickup_location} at {self.rent_start_date}</span></p>'''
+                    'alarm_ids': (
+                        self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
+                    ),
+                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Phone : {self.customer_id.phone}<br/>Mobile : {self.customer_id.mobile}<br/>Deposit : {self.car_deposit}<br/>Pick up : {self.pickup_location} at {self.rent_start_date}<br/>Obs : {self.notes}'''
                 }
             ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
                                  self.pickup_location, 
@@ -796,11 +795,10 @@ class CarRentalContract(models.Model):
                     'stop': self.rent_end_date,
                     'allday': False,
                     'partner_ids': (self.sales_person.id, self.handle_dropoff.id),
-                    'description': f'''<p><span>Vehicle : {self.vehicle_id.name}</span></p>
-                            <p><span>Customer : {self.customer_id.name}</span></p>
-                            <p><span>Phone : {self.customer_id.phone}</span></p>
-                            <p><span>Mobile : {self.customer_id.mobile}</span></p>
-                            <p><span>Drop off : {self.dropoff_location} ({self.rent_end_date})</span></p>'''
+                    'alarm_ids': (
+                        self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
+                    ),
+                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Phone : {self.customer_id.phone}<br/>Mobile : {self.customer_id.mobile}<br/>Drop off : {self.dropoff_location} ({self.rent_end_date})'''
                 }
             ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
                         self.dropoff_location, 

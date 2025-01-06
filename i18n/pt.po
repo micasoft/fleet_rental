@@ -19,7 +19,7 @@ msgstr ""
 
 #. module: fleet_rental
 #: model:ir.ui.menu,name:fleet_rental.menu_car_parent
-msgid "Rental Management"
+msgid "Fleet Rental Management"
 msgstr "Gestão de aluguer"
 
 #. module: fleet_rental
