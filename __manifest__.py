@@ -45,6 +45,7 @@
         'views/res_partner_views.xml',
         'views/fleet_vehicle_views.xml',
         'reports/report_fleet_rental.xml',
+        'reports/report_fleet_rental_contract.xml'
     ],
     'assets': {
         'web.assets_backend': [

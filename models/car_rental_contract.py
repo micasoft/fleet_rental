@@ -754,12 +754,13 @@ class CarRentalContract(models.Model):
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
             self._logger.debug("Sync Calendar_start criteria are met!")
             calendar_start_date_val = {
-                    'duration': 0.25,
+                    'duration': 0.5,
                     'name': f'Pick up : {self.vehicle_id.name}',
                     'location': self.pickup_location,
-                    'start': self.rent_start_date - timedelta(minutes=15),
+                    'start': self.rent_start_date - timedelta(minutes=30),
                     'stop': self.rent_start_date,
                     'allday': False,
+                    'show_as': 'free',
                     'partner_ids': (self.sales_person.id, self.handle_pickup.id),
                     'alarm_ids': (
                         self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
@@ -788,12 +789,13 @@ class CarRentalContract(models.Model):
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
             self._logger.debug("Sync Calendar_end criteria are met!")
             calendar_end_date_val = {
-                    'duration': 0.25,
+                    'duration': 0.5,
                     'name': f'Drop off : {self.vehicle_id.name}',
                     'location': self.pickup_location,
-                    'start': self.rent_end_date - timedelta(minutes=15),
+                    'start': self.rent_end_date - timedelta(minutes=30),
                     'stop': self.rent_end_date,
                     'allday': False,
+                    'show_as': 'free',
                     'partner_ids': (self.sales_person.id, self.handle_dropoff.id),
                     'alarm_ids': (
                         self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
@@ -824,3 +826,6 @@ class CarRentalContract(models.Model):
         """
         self.reserved_fleet_id.unlink()
         self.state = "draft"
+  
+    def _get_contract_filename(self):
+        return  ("contract_%s.pdf" % self.name.replace('/', '_')).lower()

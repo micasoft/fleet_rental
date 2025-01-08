@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
+    <!-- QWeb Reports -->
+    <record id="car_rental_contract_pdf" model="ir.actions.report">
+        <field name="name">Car Rental Contract PDF</field>
+        <field name="model">car.rental.contract</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">fleet_rental.report_fleet_rental_contract</field>
+        <field name="report_file">fleet_rental.report_fleet_rental_contract</field>
+        <field name="print_report_name">(object._get_contract_filename())</field>
+        <field name="attachment"/>
+        <field name="binding_type">report</field>
+    </record>
 
 <!--    Fleet vehicle form view
     <record id="fleet_vehicle_view_form" model="ir.ui.view">
@@ -33,6 +44,9 @@
                             class="oe_highlight"/>
                     <button name="action_move_to_quote" string="Quotation" type="object"
                             invisible="state != 'reserved'"
+                            class="oe_highlight"/>
+                    <button name="%(car_rental_contract_pdf)d" string="Contract" type="action"
+                            invisible="True"
                             class="oe_highlight"/>
                     <button name="action_run" string="Sart the renting" type="object"
                             invisible="state != 'reserved'"
@@ -113,12 +127,6 @@
                                    readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"
                                    domain="[('employee','=', True)]"/>
                             <field name="first_invoice_created" invisible="1"/>
-                            <label for="first_payment"/>
-                            <div>
-                                <field name="first_payment" class="oe_inline"
-                                       readonly="((state not in ['draft', 'running']))"/>
-                                <field name="first_payment_inv" style="width:142px;" readonly="1"/>
-                            </div>
                             <label for="cost_generated"/>
                             <div>
                                 <field name="cost_frequency" class="oe_inline"
@@ -144,6 +152,11 @@
                                 <field name="contract_days" />
                                 <field name="car_cost_per_day" readonly="state not in ['draft', 'reserved', 'running', 'checking']" />
                                 <field name="rent_cost"/>
+                                <label for="first_payment"/>
+                                <div>
+                                    <field name="first_payment" class="oe_inline" readonly="((state not in ['draft', 'running']))"/>
+                                    <field name="first_payment_inv" style="width:142px;" readonly="1"/>
+                                </div>
                             </group>
                         </page>
                         <page string="Recurring Invoices"
