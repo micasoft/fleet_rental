@@ -754,10 +754,10 @@ class CarRentalContract(models.Model):
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
             self._logger.debug("Sync Calendar_start criteria are met!")
             calendar_start_date_val = {
-                    'duration': 2,
+                    'duration': 0.25,
                     'name': f'Pick up : {self.vehicle_id.name}',
                     'location': self.pickup_location,
-                    'start': self.rent_start_date - timedelta(hours=2),
+                    'start': self.rent_start_date - timedelta(minutes=15),
                     'stop': self.rent_start_date,
                     'allday': False,
                     'partner_ids': (self.sales_person.id, self.handle_pickup.id),
@@ -788,10 +788,10 @@ class CarRentalContract(models.Model):
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
             self._logger.debug("Sync Calendar_end criteria are met!")
             calendar_end_date_val = {
-                    'duration': 2,
+                    'duration': 0.25,
                     'name': f'Drop off : {self.vehicle_id.name}',
                     'location': self.pickup_location,
-                    'start': self.rent_end_date - timedelta(hours=2),
+                    'start': self.rent_end_date - timedelta(minutes=15),
                     'stop': self.rent_end_date,
                     'allday': False,
                     'partner_ids': (self.sales_person.id, self.handle_dropoff.id),
@@ -816,3 +816,11 @@ class CarRentalContract(models.Model):
                 self.calendar_end_date_id.write(calendar_end_date_val)
                 self.calendar_end_date_hash = ch
                 self._logger.debug("Sync Calendar_end update event")
+
+    def action_move_to_quote(self):
+        """
+           Move the rental contract to quotation, update
+           state to "quote" and unreserve the vehicle.
+        """
+        self.reserved_fleet_id.unlink()
+        self.state = "draft"

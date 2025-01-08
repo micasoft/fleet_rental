@@ -73,6 +73,11 @@ msgstr "Reservar"
 
 #. module: fleet_rental
 #: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Quotation"
+msgstr "Orçamentação"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
 msgid "Sart the renting"
 msgstr "Iniciar aluguer"
 

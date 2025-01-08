@@ -31,6 +31,9 @@
                     <button name="action_confirm" string="Reserve" type="object"
                             invisible="state != 'draft'"
                             class="oe_highlight"/>
+                    <button name="action_move_to_quote" string="Quotation" type="object"
+                            invisible="state != 'reserved'"
+                            class="oe_highlight"/>
                     <button name="action_run" string="Sart the renting" type="object"
                             invisible="state != 'reserved'"
                             class="oe_highlight"/>
