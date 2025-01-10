@@ -18,6 +18,7 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
+import base64
 import logging
 
 from datetime import datetime, date, timedelta
@@ -160,7 +161,6 @@ class CarRentalContract(models.Model):
                                      string='Handle Drop off',
                                      help="Person in charge of handle the drop off",
                                      default=lambda self: self.env.user.partner_id.id)
-    
 
 
     def action_run(self):
@@ -829,3 +829,25 @@ class CarRentalContract(models.Model):
   
     def _get_contract_filename(self):
         return  ("contract_%s.pdf" % self.name.replace('/', '_')).lower()
+
+    def _get_reserve_filename(self):
+        return  ("reserve_%s.pdf" % self.name.replace('/', '_')).lower()
+
+    def action_generate_contract(self):
+        #Delete previous contract!
+        self.env['ir.attachment'].sudo().search([('res_model', '=', self._name),
+                                                 ('name', '=', self._get_contract_filename()),
+                                                 ('res_id', '=', self.id)]).unlink()
+        # Generate the PDF using the report
+        pdf_content, t  = self.env['ir.actions.report'].with_context(force_report_rendering=True)._render_qweb_pdf('fleet_rental.car_rental_contract_pdf', res_ids=self.id)
+        self._logger.info(t)
+
+        # Save the PDF as an attachment
+        self.attachment_ids = [(4, self.env['ir.attachment'].create({
+            'name': self._get_contract_filename(),
+            'type': 'binary',
+            'datas': base64.encodebytes(pdf_content),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/pdf',
+        }).id)]

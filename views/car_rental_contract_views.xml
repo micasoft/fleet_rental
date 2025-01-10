@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
     <!-- QWeb Reports -->
+    <record id="car_rental_reserve_pdf" model="ir.actions.report">
+        <field name="name">Reserve PDF</field>
+        <field name="model">car.rental.contract</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">fleet_rental.report_fleet_rental_reserve</field>
+        <field name="report_file">fleet_rental.report_fleet_rental_reserve</field>
+        <field name="print_report_name">(object._get_reserve_filename())</field>
+        <field name="binding_model_id" ref="fleet_rental.model_car_rental_contract"/>
+    </record>
     <record id="car_rental_contract_pdf" model="ir.actions.report">
-        <field name="name">Car Rental Contract PDF</field>
+        <field name="name">Contract PDF</field>
         <field name="model">car.rental.contract</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">fleet_rental.report_fleet_rental_contract</field>
         <field name="report_file">fleet_rental.report_fleet_rental_contract</field>
         <field name="print_report_name">(object._get_contract_filename())</field>
-        <field name="attachment"/>
-        <field name="binding_type">report</field>
+        <field name="binding_model_id" ref="fleet_rental.model_car_rental_contract"/>
     </record>
 
 <!--    Fleet vehicle form view
@@ -45,8 +53,8 @@
                     <button name="action_move_to_quote" string="Quotation" type="object"
                             invisible="state != 'reserved'"
                             class="oe_highlight"/>
-                    <button name="%(car_rental_contract_pdf)d" string="Contract" type="action"
-                            invisible="True"
+                    <button name="action_generate_contract" string="Generate Contract" type="object"
+                            invisible="state != 'reserved'"
                             class="oe_highlight"/>
                     <button name="action_run" string="Sart the renting" type="object"
                             invisible="state != 'reserved'"
