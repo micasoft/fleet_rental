@@ -45,7 +45,12 @@ class CarRentalContract(models.Model):
                        copy=False)
     customer_id = fields.Many2one('res.partner',
                                   required=True,
+                                  store=True,
                                   string='Customer')
+    driver_id = fields.Many2one('res.partner',
+                                  required=True,
+                                  store=True,
+                                  string='Driver')
     vehicle_id = fields.Many2one('fleet.vehicle',
                                  string="Vehicle",
                                  required=True,
@@ -64,7 +69,12 @@ class CarRentalContract(models.Model):
                             store=True)
     car_km_included_per_day = fields.Integer(string="Km(s) included",
                             related='vehicle_id.km_included_per_day',
-                            store=True)
+                            store=True,
+                            tracking=True)
+    car_km_extra = fields.Integer(string="Km(s) extra",
+                            related='vehicle_id.km_extra',
+                            store=True,
+                            tracking=True)
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
                         required=True,
@@ -765,7 +775,7 @@ class CarRentalContract(models.Model):
                     'alarm_ids': (
                         self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
                     ),
-                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Phone : {self.customer_id.phone}<br/>Mobile : {self.customer_id.mobile}<br/>Deposit : {self.car_deposit}<br/>Pick up : {self.pickup_location} at {self.rent_start_date}<br/>Obs : {self.notes}'''
+                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Deposit : {self.car_deposit}<br/>Pick up : {self.pickup_location} at {self.rent_start_date}<br/>Obs : {self.notes}'''
                 }
             ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
                                  self.pickup_location, 
@@ -800,7 +810,7 @@ class CarRentalContract(models.Model):
                     'alarm_ids': (
                         self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
                     ),
-                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Phone : {self.customer_id.phone}<br/>Mobile : {self.customer_id.mobile}<br/>Drop off : {self.dropoff_location} ({self.rent_end_date})'''
+                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Drop off : {self.dropoff_location} ({self.rent_end_date})'''
                 }
             ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
                         self.dropoff_location, 

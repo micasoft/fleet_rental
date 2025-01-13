@@ -51,6 +51,10 @@ class CarRentalFleetVehicle(models.Model):
                         help="The number of km included per day",
                         default=0)
 
+    km_extra = fields.Integer(string="Km extra cost",
+                        help="Value of Km extra",
+                        default=0)
+
     _sql_constraints = [('vin_sn_unique', 'unique (vin_sn)',
                          "Chassis Number already exists !"),
                         ('license_plate_unique', 'unique (license_plate)',

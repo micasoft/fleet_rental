@@ -16,6 +16,7 @@
                        <group string="Details">
                            <field name="deposit"/>
                            <field name="km_included_per_day"/>
+                           <field name="km_extra"/>
                         </group>
                         <group string="Costs">
                             <field name="rental_cost">

@@ -132,6 +132,11 @@ msgid "Customer"
 msgstr "Cliente"
 
 #. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__driver_id
+msgid "Driver"
+msgstr "Condutor"
+
+#. module: fleet_rental
 #: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__name
 msgid "Name"
 msgstr "Ref"
@@ -165,6 +170,11 @@ msgstr "Caução com seguro incluido"
 #: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__car_km_included_per_day
 msgid "Km(s) included"
 msgstr "Km(s) incluidos"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__car_km_extra
+msgid "Km(s) extra"
+msgstr "Km(s) extra"
 
 #. module: fleet_rental
 #: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__rent_cost
@@ -526,6 +536,11 @@ msgstr "Valor da caução"
 #: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__km_included_per_day
 msgid "Km(s) included"
 msgstr "Km(s) incluidos"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__km_extra
+msgid "Km extra cost"
+msgstr "Custo Km extra"
 
 #. module: fleet_rental
 #: model_terms:ir.ui.view,arch_db:fleet_rental.fleet_vehicle_view_form

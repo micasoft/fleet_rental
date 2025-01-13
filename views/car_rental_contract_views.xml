@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
+    <!-- The top margin on the default A4 format is way too big -->
+    <record id="paperformat_car_rental" model="report.paperformat">
+        <field name="name">A4 - Car Rental Management</field>
+        <field name="default" eval="False" />
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False" />
+        <field name="header_spacing">15</field>
+        <field name="dpi">90</field>
+        <field name="css_margins" eval="False" />
+    </record>
     <!-- QWeb Reports -->
     <record id="car_rental_reserve_pdf" model="ir.actions.report">
         <field name="name">Reserve PDF</field>
@@ -9,6 +26,7 @@
         <field name="report_file">fleet_rental.report_fleet_rental_reserve</field>
         <field name="print_report_name">(object._get_reserve_filename())</field>
         <field name="binding_model_id" ref="fleet_rental.model_car_rental_contract"/>
+        <field name="paperformat_id" ref="fleet_rental.paperformat_car_rental"/>
     </record>
     <record id="car_rental_contract_pdf" model="ir.actions.report">
         <field name="name">Contract PDF</field>
@@ -18,6 +36,7 @@
         <field name="report_file">fleet_rental.report_fleet_rental_contract</field>
         <field name="print_report_name">(object._get_contract_filename())</field>
         <field name="binding_model_id" ref="fleet_rental.model_car_rental_contract"/>
+        <field name="paperformat_id" ref="fleet_rental.paperformat_car_rental"/>
     </record>
 
 <!--    Fleet vehicle form view
@@ -104,9 +123,12 @@
                     <group>
                         <separator string="Contract Details" colspan="4"/>
                         <group>
-                            <field name="customer_id" string="Customer"
+                            <field name="customer_id"
                                    domain="[('active','=', True)]"
                                    readonly="state != 'draft'"/>
+                            <field name="driver_id"
+                                   domain="[('active','=', True)]"
+                                   readonly="state not in ['draft', 'reserved'] "/>
                             <field name="sent_quote" invisible="1"/>
                             <field name="read_only" invisible="1"/>
                             <field name="rent_start_date"
@@ -117,10 +139,6 @@
                                    readonly="((state not in ['draft']) and (read_only == False))"/>
                             <field name="dropoff_location"
                                    readonly="state not in ['draft']"/>
-                            <field name="vehicle_id"
-                                   domain="[('state_id.name','!=','Inactive')]"
-                                   readonly="state != 'draft'"
-                                   options="{'no_create': True}"/>
                             <field name="journal_type" invisible="1"/>
                         </group>
                         <group>
@@ -144,6 +162,10 @@
                                 readonly="state != 'draft'"
                                 required="cost_frequency not in [None, False , 'no']"/>
                             </div>
+                            <field name="vehicle_id"
+                                   domain="[('state_id.name','!=','Inactive')]"
+                                   readonly="state != 'draft'"
+                                   options="{'no_create': True}"/>
                         </group>
                         <group>
                             <field name="attachment_ids"
@@ -157,6 +179,7 @@
                                 <field name="car_description"/>
                                 <field name="car_deposit" readonly="state not in ['draft', 'reserved']"/>
                                 <field name="car_km_included_per_day" readonly="state not in ['draft', 'reserved']"/>
+                                <field name="car_km_extra" readonly="state not in ['draft', 'reserved']"/>
                                 <field name="contract_days" />
                                 <field name="car_cost_per_day" readonly="state not in ['draft', 'reserved', 'running', 'checking']" />
                                 <field name="rent_cost"/>
