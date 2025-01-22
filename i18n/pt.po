@@ -1,10 +1,10 @@
 # Translation of Odoo Server.
 # This file contains the translation of the following modules:
 # 	* fleet_rental
-# 
+#
 # Translators:
 # Jorge Carneiro, 2024
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
@@ -543,6 +543,11 @@ msgid "Km extra cost"
 msgstr "Custo Km extra"
 
 #. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_fleet_vehicle__owner
+msgid "Vehicle owner"
+msgstr "Proprietário do veículo"
+
+#. module: fleet_rental
 #: model_terms:ir.ui.view,arch_db:fleet_rental.fleet_vehicle_view_form
 #: model_terms:ir.ui.view,arch_db:fleet_rental.res_config_settings_view_form
 msgid "Rental Management"
@@ -674,3 +679,65 @@ msgstr "Responsavel pelo levantamento da viatura"
 #: model:ir.model.fields,help:fleet_rental.field_car_rental_contract__handle_dropoff
 msgid "Person in charge of handle the drop off"
 msgstr "Responsavel pela entrega da viatura"
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "ID/Passport"
+msgstr "CC ou Passaporte"
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "Issued by"
+msgstr "Emitido por"
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "Expires"
+msgstr "Expira"
+
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "Date of birth"
+msgstr "Data de nascimento"
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "Birthplace"
+msgstr "Nacionalidade"
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "License"
+msgstr "Carta de Condução"
+
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "From"
+msgstr "de"
+
+#. module: base
+#: model_terms:ir.ui.view,arch_db:fleet_rental.view_partner_form
+msgid "Until"
+msgstr "até"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_partner__person_id
+msgid "ID/Passport"
+msgstr "CC/Passaporte"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_partner__date_of_birth
+msgid "Date of birth"
+msgstr "Data de nascimento"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_partner__license
+msgid "License"
+msgstr "Carta de condução"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_res_partner__is_agency
+msgid "Is Rental Agency"
+msgstr "É uma agência de aluguer"

@@ -25,17 +25,24 @@ class CarRentalFleetVehicle(models.Model):
     """Inherit fleet.vehicle"""
     _inherit = 'fleet.vehicle'
 
+    company_currency_id = fields.Many2one(related='company_id.currency_id')
+
+    owner = fields.Many2one('res.partner',
+                            required=True,
+                            store=True,
+                            string='Vehicle owner')
+
     rental_reserved_time = fields.One2many('car.rental.reserved',
                                            'reserved_obj_id',
                                            string='Reserved Time',
                                            help='Reserved rental time',
                                            readonly=True)
-    
+
     rental_cost = fields.One2many('car.rental.vehicle.cost',
                                            'vehicle_id',
                                            string='Rental Cost',
                                            help='Vehicle range cost')
-    
+
     fuel_type = fields.Selection(selection_add=[('gasoline', 'Gasoline'),
                                   ('diesel', 'Diesel'),
                                   ('electric', 'Electric'),
@@ -43,17 +50,19 @@ class CarRentalFleetVehicle(models.Model):
                                   ('petrol', 'Petrol')],
                                  string='Fuel Type', help='Fuel Used by the vehicle')
 
-    deposit = fields.Float(string="Deposit value",
+    deposit = fields.Monetary(string="Deposit value",
                         help="This fields is to determine the deposit value per day",
-                        default=0)
-    
+                        default=0,
+                        currency_field='company_currency_id')
+
     km_included_per_day = fields.Integer(string="Km(s) included",
                         help="The number of km included per day",
                         default=0)
 
-    km_extra = fields.Integer(string="Km extra cost",
+    km_extra = fields.Monetary(string="Km extra cost",
                         help="Value of Km extra",
-                        default=0)
+                        default=0,
+                        currency_field='company_currency_id')
 
     _sql_constraints = [('vin_sn_unique', 'unique (vin_sn)',
                          "Chassis Number already exists !"),

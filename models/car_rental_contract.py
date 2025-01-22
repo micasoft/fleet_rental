@@ -50,7 +50,13 @@ class CarRentalContract(models.Model):
     driver_id = fields.Many2one('res.partner',
                                   required=True,
                                   store=True,
-                                  string='Driver')
+                                  string='Driver',
+                                  tracking=True)
+    driver_extra_id = fields.Many2one('res.partner',
+                                  required=False,
+                                  store=True,
+                                  string='Extra Driver',
+                                  tracking=True)
     vehicle_id = fields.Many2one('fleet.vehicle',
                                  string="Vehicle",
                                  required=True,
@@ -63,18 +69,20 @@ class CarRentalContract(models.Model):
                             related='vehicle_id.model_id.display_name',
                             copy=False,
                             readonly=True)
-    car_deposit = fields.Float(string="Car Deposit",
+    car_deposit = fields.Monetary(string="Car Deposit",
                             help='Security deposit/Insuranse excess',
                             related='vehicle_id.deposit',
-                            store=True)
+                            store=True,
+                            currency_field='company_currency_id')
     car_km_included_per_day = fields.Integer(string="Km(s) included",
                             related='vehicle_id.km_included_per_day',
                             store=True,
                             tracking=True)
-    car_km_extra = fields.Integer(string="Km(s) extra",
+    car_km_extra = fields.Monetary(string="Km(s) extra",
                             related='vehicle_id.km_extra',
                             store=True,
-                            tracking=True)
+                            tracking=True,
+                            currency_field='company_currency_id')
     rent_cost = fields.Float(string="Rent Cost",
                         help="This fields is to determine the cost of rent",
                         required=True,
@@ -155,6 +163,7 @@ class CarRentalContract(models.Model):
     company_id = fields.Many2one('res.company', string='Company',
                                  default=lambda self: self.env.company,
                                  help="Company this record owns")
+    company_currency_id = fields.Many2one(related='company_id.currency_id')
     
     sent_quote = fields.Boolean(string="Quote sent",
                                 default=False, copy=False)
@@ -330,6 +339,10 @@ class CarRentalContract(models.Model):
             end_date = datetime.strptime(str(record.rent_end_date),
                                          DATE_FORMAT).date()
 
+            if start_date <= date.today() and record.state == 'reserved':
+                self._logger.info(f"{record.id} moved to running")
+                record.state = "running"
+
             if end_date >= date.today() and record.state == 'running':
                 temp = 0
                 if record.cost_frequency == 'daily':
@@ -347,11 +360,8 @@ class CarRentalContract(models.Model):
                 self._logger.info(f"{record.id} moved to checking")
                 record.state = "checking"
 
-            if start_date <= date.today() and record.state == 'reserved':
-                self._logger.info(f"{record.id} moved to running")
-                record.state = "running"
             #Close the day
-            if record.state == 'record': 
+            if record.state == 'invoice':
                 self._logger.info(f"{record.id} moved to done")
                 record.state = "done"
 
@@ -361,21 +371,22 @@ class CarRentalContract(models.Model):
             Notify the seller about the next day events
         """
         next_day = date.today() + timedelta(days=1)
-        next_events_template = self.env.ref('fleet_rental.mail_template_next_events')
+        next_pickup_template = self.env.ref('fleet_rental.mail_template_next_pickup')
         for record in self.search([('state', '=', 'reserved' )]):
             start_date = datetime.strptime(str(record.rent_start_date),
                                            DATE_FORMAT).date()
             if start_date == next_day:
-                next_events_template.send_mail(record.id)
+                next_pickup_template.send_mail(record.id)
 
             if start_date > date.today():
                 self.action_run()
-        
+
+        next_dropoff_template = self.env.ref('fleet_rental.mail_template_next_dropoff')
         for record in self.search([('state', '=', 'running' )]):
             end_date = datetime.strptime(str(record.rent_end_date),
                                          DATE_FORMAT).date()
             if end_date == next_day:
-                next_events_template.send_mail(record.id)
+                next_dropoff_template.send_mail(record.id)
 
     def _create_recurring_invoice(self, record, invoice_date = date.today()):
 

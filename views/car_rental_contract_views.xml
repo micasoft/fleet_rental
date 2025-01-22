@@ -8,10 +8,10 @@
         <field name="page_height">0</field>
         <field name="page_width">0</field>
         <field name="orientation">Portrait</field>
-        <field name="margin_top">10</field>
+        <field name="margin_top">20</field>
         <field name="margin_bottom">10</field>
-        <field name="margin_left">7</field>
-        <field name="margin_right">7</field>
+        <field name="margin_left">15</field>
+        <field name="margin_right">15</field>
         <field name="header_line" eval="False" />
         <field name="header_spacing">15</field>
         <field name="dpi">90</field>
@@ -54,7 +54,7 @@
         </field>
     </record> -->
 
-    
+
 <!--    Car rental contract form view-->
     <record id="car_rental_contract_view_form" model="ir.ui.view">
         <field name="name">car.rental.contract.view.form</field>
@@ -98,7 +98,7 @@
                             invisible="((state != 'running') or (first_invoice_created == False and first_payment > 0.0))"
                             type="object" class="oe_highlight"/>
                     <button name="action_verify" string="Verify/Invoice"
-                            invisible="state != 'checking'" 
+                            invisible="state != 'checking'"
                             type="object" class="oe_highlight"/>
                     <button name="set_to_done" string="Set to Done"
                             invisible="state not in ['invoice']" type="object" class="oe_highlight"/>
@@ -129,26 +129,29 @@
                             <field name="driver_id"
                                    domain="[('active','=', True)]"
                                    readonly="state not in ['draft', 'reserved'] "/>
+                            <field name="driver_extra_id"
+                                   domain="[('active','=', True)]"
+                                   readonly="state not in ['draft', 'reserved'] "/>
                             <field name="sent_quote" invisible="1"/>
                             <field name="read_only" invisible="1"/>
                             <field name="rent_start_date"
                                    readonly="state != 'draft'"/>
-                            <field name="pickup_location"
-                                   readonly="state != 'draft'"/>
                             <field name="rent_end_date"
                                    readonly="((state not in ['draft']) and (read_only == False))"/>
-                            <field name="dropoff_location"
-                                   readonly="state not in ['draft']"/>
                             <field name="journal_type" invisible="1"/>
+                            <field name="company_id" readonly="state != 'draft'"/>
                         </group>
                         <group>
-                            <field name="company_id" readonly="state != 'draft'"/>
-                            <field name="sales_person"
+                          <field name="sales_person"
                                    readonly="state != 'draft'"
                                    domain="[('employee','=', True)]"/>
+                            <field name="pickup_location"
+                                   readonly="state != 'draft'"/>
                             <field name="handle_pickup"
                                    readonly="((state not in ['draft', 'reserved']) and (read_only == False))"
                                    domain="[('employee','=', True)]"/>
+                            <field name="dropoff_location"
+                                   readonly="state not in ['draft']"/>
                             <field name="handle_dropoff"
                                    readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"
                                    domain="[('employee','=', True)]"/>
@@ -280,7 +283,7 @@
             </calendar>
         </field>
     </record>
-    
+
 <!--    Action rental contract-->
     <record id="action_car_rental_contract" model="ir.actions.act_window">
         <field name="name">Rental Contract</field>
@@ -290,7 +293,7 @@
 
     <menuitem name="Fleet Rental" id="fleet.menu_root" sequence="115"
               groups="fleet.fleet_group_user"
-              web_icon="fleet_rental,static/description/icon.png"/>       
+              web_icon="fleet_rental,static/description/icon.png"/>
     <menuitem id="menu_car_parent" sequence="1" name="Rental Management"
               parent="fleet.menu_root"/>
     <menuitem id="menu_car_rental_contract" parent="menu_car_parent"

@@ -4,7 +4,7 @@
     <record id="mail_template_quote" model="mail.template">
         <field name="name">Car Rental: Quote</field>
         <field name="description">Sent to customers a quote related to the reservation</field>
-        <field name="model_id" 
+        <field name="model_id"
             ref="fleet_rental.model_car_rental_contract" />
         <field name="lang">{{ object.customer_id.lang }}</field>
         <field name="partner_to">{{ object.customer_id.id }}</field>
@@ -68,11 +68,11 @@
 </table>
         </field>
     </record>
-    
+
     <record id="mail_template_reserved" model="mail.template">
         <field name="name">Car Rental: Reservation</field>
         <field name="description">Sent to customers reservation</field>
-        <field name="model_id" 
+        <field name="model_id"
             ref="fleet_rental.model_car_rental_contract" />
         <field name="lang">{{ object.customer_id.lang }}</field>
         <field name="subject">Reservation for {{object.car_description}}</field>
@@ -154,7 +154,7 @@
     <record id="mail_template_recurring_reminder" model="mail.template">
         <field name="name">Car Rental: Recurring reminder</field>
         <field name="description">Sent to customers the recurring reminder</field>
-        <field name="model_id" 
+        <field name="model_id"
             ref="fleet_rental.model_car_rental_contract" />
         <field name="subject">Reminder Recurrent Payment!</field>
         <field name="partner_to">{{ object.customer_id.id }}</field>
@@ -164,7 +164,7 @@
         <h3>Reminder Recurrent Payment!</h3>
         Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
         <br /><br />
-        <p>his is to remind you that the recurrent payment for the rental contract has to be done. 
+        <p>his is to remind you that the recurrent payment for the rental contract has to be done.
             Please make the payment at the earliest.</p>
         <p><b>Please find the details below:</b><br/>
         Contract Ref <t t-out="object.name or ''">RENT/2024/0001</t><br/>
@@ -179,13 +179,15 @@
         </field>
     </record>
 
-    <record id="mail_template_next_events" model="mail.template">
-        <field name="name">Car Rental: Notify next events</field>
-        <field name="description">Sent to seller the events for the next day</field>
-        <field name="model_id" 
+    <record id="mail_template_next_pickup" model="mail.template">
+        <field name="name">Car Rental: Notify nextp pickup(s)</field>
+        <field name="description">Sent to seller the events for the next pickup(s)</field>
+        <field name="model_id"
             ref="fleet_rental.model_car_rental_contract" />
         <field name="subject">Next events for {{object.name}}!</field>
-        <field name="partner_to">{{ object.sales_person.id }}</field>
+        <field name="email_from">{{ object.company_id.email }}</field>
+        <field name="partner_to">{{ object.handle_pickup.id }}</field>
+        <field name="email_cc">{{ object.sales_person.email }}</field>
         <field name="body_html" type="html">
 <div style="margin: 0px; padding: 0px;">
     <p style="margin: 0px; padding: 0px; font-size: 13px;">
@@ -210,6 +212,40 @@
 </div>
         </field>
     </record>
-    
+
+    <record id="mail_template_next_dropoff" model="mail.template">
+        <field name="name">Car Rental: Notify nextp dropoff(s)</field>
+        <field name="description">Sent to seller the events for the next dropoff(s)</field>
+        <field name="model_id"
+            ref="fleet_rental.model_car_rental_contract" />
+        <field name="subject">Next events for {{object.name}}!</field>
+        <field name="email_from">{{ object.company_id.email }}</field>
+        <field name="partner_to">{{ object.handle_dropoff.id }}</field>
+        <field name="email_cc">{{ object.sales_person.email }}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.sales_person.name or ''">Brandon Freeman</t>,
+        <br /><br />
+        <p>Tomorrow you have some action(s) in this booking</p>
+        <b>Please find the details below:</b><br/>
+        Pick up <t t-out="object.rent_start_date or ''">01-01-2024</t> at <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
+        Drop off <t t-out="object.rent_end_date or ''">31-01-2024</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
+        Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-benz CLS</t><br/>
+        Deposit <t t-out="object.car_deposit or ''">2000</t><br/>
+        <t t-if="len(object.line_tools) > 0">
+        <b>Acessories:</b><br/>
+        <ul>
+        <t t-foreach="object.line_tools" t-as="tool">
+            <li><t t-out="tool.name.name"/></li>
+        </t>
+        </ul>
+        </t>
+        Notes <t t-out="object.notes or ''"></t><br/>
+    </p>
+</div>
+        </field>
+    </record>
+
 </data>
 </odoo>

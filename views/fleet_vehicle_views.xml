@@ -14,6 +14,7 @@
                    <page string="Rental Management" name="page_car_rental">
                     <group>
                        <group string="Details">
+                           <field name="owner" domain="[('is_company','=', True)]"/>
                            <field name="deposit"/>
                            <field name="km_included_per_day"/>
                            <field name="km_extra"/>

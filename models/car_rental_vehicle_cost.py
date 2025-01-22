@@ -27,6 +27,7 @@ class CarRentalVehicleCost(models.Model):
     _name = "car.rental.vehicle.cost"
     _description = "Vehicle range cost"
     _logger = logging.getLogger(__name__)
+    company_currency_id = fields.Many2one(related='company_id.currency_id')
 
     vehicle_id = fields.Many2one('fleet.vehicle',
                                       string='Vehicle',
@@ -34,8 +35,13 @@ class CarRentalVehicleCost(models.Model):
                                       ondelete='cascade')
     day_from = fields.Integer(string='From day')
     day_to = fields.Integer(string='To day')
-    cost_per_day = fields.Float(string="Rent cost per day",
-                        help="This fields is to determine the cost of rent per day")
+    cost_per_day = fields.Monetary(string="Rent cost per day",
+                        help="This fields is to determine the cost of rent per day",
+                        currency_field='company_currency_id')
+
+    company_id = fields.Many2one('res.company', string='Company',
+                                 default=lambda self: self.env.company,
+                                 help="Company this record owns")
 
     @api.constrains('day_from', 'day_to')
     def total_updater(self):

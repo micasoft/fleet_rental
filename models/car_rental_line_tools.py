@@ -25,6 +25,7 @@ class CarRentalLineTools(models.Model):
     """Model to add the line tools of rental"""
     _name = 'car.rental.line.tools'
     _description = 'Car rental line tools model'
+    company_currency_id = fields.Many2one(related='company_id.currency_id')
 
     name = fields.Many2one('car.rental.tools', string="Name",
                            help='Select car tools')
@@ -38,8 +39,9 @@ class CarRentalLineTools(models.Model):
  
     unit = fields.Selection(related='name.unit', readonly=False)
     
-    price = fields.Float(string="Price",
-                         help='Price of the car tool')
+    price = fields.Monetary(string="Price",
+                         help='Price of the car tool',
+                         currency_field='company_currency_id')
     
     company_id = fields.Many2one('res.company', string='Company',
                                  default=lambda self: self.env.company,

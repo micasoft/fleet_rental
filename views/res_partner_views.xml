@@ -6,16 +6,62 @@
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form" />
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']/.." position="after">
+                <span class="o_form_label o_td_label">
+                    <label for="person_id" invisible="is_company"/>
+                </span>
+                <div style="width: 100%;">
+                    <div style="width: 35%; display:inline-block;margin-right: 2%;">
+                        <field name="person_id" invisible="is_company" widget="char" placeholder="ID/Passport" class="o_address_city"/>
+                    </div>
+                    <div style="width: 35%; display:inline-block;margin-right: 2%;">
+                        <field name="person_id_issuer" invisible="is_company" widget="char" placeholder="Issued by" class="o_address_state"/>
+                    </div>
+                    <div style="width: 26%; display:inline-block;">
+                        <field name="person_id_date" invisible="is_company" widget="date" placeholder="Expires" class="o_address_zip"/>
+                    </div>
+                </div>
+
+                <span class="o_form_label o_td_label">
+                    <label for="date_of_birth" invisible="is_company"/>
+                </span>
+
+                <div style="width: 100%;">
+                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
+                        <field name="date_of_birth" invisible="is_company" widget="date" placeholder="Date of birth" />
+                    </div>
+                    <div style="width: 49%; display:inline-block;">
+                        <field name="birthplace" invisible="is_company" widget="char" placeholder="Birthplace" />
+                    </div>
+                </div>
+
+                <span class="o_form_label o_td_label">
+                    <label for="license" invisible="is_company"/>
+                </span>
+
+                <div style="width: 100%;">
+                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
+                        <field name="license" invisible="is_company" widget="char" placeholder="License"/>
+                    </div>
+                    <div style="width: 49%;display:inline-block;">
+                        <field name="license_issuer" invisible="is_company" widget="char" placeholder="Issued by"/>
+                    </div>
+                    <div style="width: 49%;display:inline-block;margin-right: 2%;">
+                        <field name="license_date" invisible="is_company" widget="date" placeholder="From"/>
+                    </div>
+                    <div style="width: 49%;display:inline-block;">
+                        <field name="license_until" invisible="is_company" widget="date" placeholder="Until"/>
+                    </div>
+                </div>
+            </xpath>
             <xpath expr="//page[@name='internal_notes']" position="after">
-                <page name='fleet_car_rental' string="Car Rental Management" invisible="is_company">
-                    <group string="Car Rental Settings" name="car_rental" priority="1">
-                        <field name="employee" />
+                <page name="fleet_car_rental" string="Car Rental Management">
+                    <group string="Car Rental Settings" name="car_rental" priority="1" >
+                        <field name="employee" invisible="is_company"/>
+                        <field name="is_agency" invisible="not is_company"/>
                     </group>
                 </page>
             </xpath>
         </field>
     </record>
 </odoo>
-
-
-                       
