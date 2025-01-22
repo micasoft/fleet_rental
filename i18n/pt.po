@@ -78,6 +78,11 @@ msgstr "Orçamentação"
 
 #. module: fleet_rental
 #: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
+msgid "Generate Contract"
+msgstr "Gerar Contrato"
+
+#. module: fleet_rental
+#: model_terms:ir.ui.view,arch_db:fleet_rental.car_rental_contract_view_form
 msgid "Sart the renting"
 msgstr "Iniciar aluguer"
 
@@ -135,6 +140,11 @@ msgstr "Cliente"
 #: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__driver_id
 msgid "Driver"
 msgstr "Condutor"
+
+#. module: fleet_rental
+#: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__driver_extra_id
+msgid "Extra Driver"
+msgstr "Condutor adicional"
 
 #. module: fleet_rental
 #: model:ir.model.fields,field_description:fleet_rental.field_car_rental_contract__name
