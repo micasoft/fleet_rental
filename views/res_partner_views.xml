@@ -11,14 +11,17 @@
                     <label for="person_id" invisible="is_company"/>
                 </span>
                 <div style="width: 100%;">
-                    <div style="width: 35%; display:inline-block;margin-right: 2%;">
+                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
                         <field name="person_id" invisible="is_company" widget="char" placeholder="ID/Passport" class="o_address_city"/>
                     </div>
-                    <div style="width: 35%; display:inline-block;margin-right: 2%;">
+                    <div style="width: 49%; display:inline-block;">
                         <field name="person_id_issuer" invisible="is_company" widget="char" placeholder="Issued by" class="o_address_state"/>
                     </div>
-                    <div style="width: 26%; display:inline-block;">
+                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
                         <field name="person_id_date" invisible="is_company" widget="date" placeholder="Expires" class="o_address_zip"/>
+                    </div>
+                    <div style="width: 49%; display:inline-block;">
+                        <field name="person_id_until" invisible="is_company" widget="date" placeholder="Expires" class="o_address_zip"/>
                     </div>
                 </div>
 

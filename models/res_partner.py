@@ -10,6 +10,7 @@ class CarRentalResPartner(models.Model):
 
     person_id = fields.Char(string='ID/Passport')
     person_id_date = fields.Date(string="Issued at")
+    person_id_until = fields.Date(string="ID/Passport until")
     person_id_issuer = fields.Char(string="Issued by")
 
     date_of_birth = fields.Date(string="Date of birth")
