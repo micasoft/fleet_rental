@@ -29,14 +29,14 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class CarRentalContract(models.Model):
     _logger = logging.getLogger(__name__)
-    
+
     _name = 'car.rental.contract'
     _inherit = ['mail.thread']
     _description = 'Fleet Rental Contract'
 
     image = fields.Binary(related='vehicle_id.image_128',
                           string="Image of Vehicle")
-    
+
     reserved_fleet_id = fields.Many2one('car.rental.reserved',
                                         copy=False)
     name = fields.Char(string="Name",
@@ -115,7 +115,7 @@ class CarRentalContract(models.Model):
         copy=False,
         tracking=True)
     notes = fields.Text(string="Details & Notes")
-    
+
     cost_generated = fields.Float(string='Recurring Cost',
                                   help="Costs paid at regular intervals, depending on the cost frequency")
     cost_frequency = fields.Selection(
@@ -164,7 +164,7 @@ class CarRentalContract(models.Model):
                                  default=lambda self: self.env.company,
                                  help="Company this record owns")
     company_currency_id = fields.Many2one(related='company_id.currency_id')
-    
+
     sent_quote = fields.Boolean(string="Quote sent",
                                 default=False, copy=False)
 
@@ -199,7 +199,7 @@ class CarRentalContract(models.Model):
         if self.state == 'draft':
             self._update_rent_cost()
         self.total_updater()
-    
+
     @api.onchange('line_tools')
     def _onchange_line_tools(self):
        self._update_unit_tools()
@@ -217,13 +217,13 @@ class CarRentalContract(models.Model):
     def _check_availability(self):
         _rent_from = datetime.strptime(str(self.rent_start_date), DATE_FORMAT)
         _rent_to = datetime.strptime(str(self.rent_end_date), DATE_FORMAT)
-        
+
         check_availability = True
         for each in self.vehicle_id.rental_reserved_time:
             if each.date_from <= _rent_to and each.date_to >= _rent_from:
                 check_availability = False
-        return check_availability, _rent_from, _rent_to 
-    
+        return check_availability, _rent_from, _rent_to
+
     def _verify_payment(self):
         invoice_ids = self.env['account.move'].search(
             [('fleet_rent_id', '=', self.id)])
@@ -263,8 +263,8 @@ class CarRentalContract(models.Model):
         if self.rent_start_date and self.rent_end_date:
             if self.rent_end_date < self.rent_start_date:
                 raise UserError("Please select the valid end date.")
-            self.contract_days = (self.rent_end_date 
-                                  - self.rent_start_date 
+            self.contract_days = (self.rent_end_date
+                                  - self.rent_start_date
                                   - timedelta(
                                       hours=int(self.env['ir.config_parameter'].sudo().get_param('fleet_rental_tolerance_delay'))
                                     )).days + 1
@@ -335,7 +335,7 @@ class CarRentalContract(models.Model):
 
             start_date = datetime.strptime(str(record.rent_start_date),
                                            DATE_FORMAT).date()
-            
+
             end_date = datetime.strptime(str(record.rent_end_date),
                                          DATE_FORMAT).date()
 
@@ -360,10 +360,10 @@ class CarRentalContract(models.Model):
                 self._logger.info(f"{record.id} moved to checking")
                 record.state = "checking"
 
-            #Close the day
-            if record.state == 'invoice':
-                self._logger.info(f"{record.id} moved to done")
-                record.state = "done"
+        #Close the day
+        if record.state == 'invoice':
+            self._logger.info(f"{record.id} moved to done")
+            record.state = "done"
 
     @api.model
     def next_event(self):
@@ -394,7 +394,7 @@ class CarRentalContract(models.Model):
         recurring_obj = self.env['car.rental.line']
         supplier = record.customer_id
         product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))], 
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))],
             limit=1)
         if product.property_account_income_id.id:
             income_account = product.property_account_income_id
@@ -453,7 +453,7 @@ class CarRentalContract(models.Model):
         self.reserved_fleet_id.unlink()
         #self.rent_end_date = fields.Date.today()
         product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))], 
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))],
             limit=1)
         if product.property_account_income_id.id:
             income_account = product.property_account_income_id
@@ -464,7 +464,7 @@ class CarRentalContract(models.Model):
                 _('Please define income account for this product: "%s" (id:%d).') % (
                     product.name,
                     product.id))
- 
+
         if self.total_cost != 0:
             inv_lines = []
 
@@ -476,7 +476,7 @@ class CarRentalContract(models.Model):
                         'quantity': 1,
                         'product_id': product.id,
                     }))
-        
+
             if self.tools_cost > 0:
                 inv_lines.append((0, 0, {
                         'name': "Accessories/Tools",
@@ -494,7 +494,7 @@ class CarRentalContract(models.Model):
                         'quantity': 1,
                         'product_id': product.id,
                     }))
-            
+
             supplier = self.customer_id
             inv_data = {
                 'ref': supplier.name,
@@ -510,7 +510,7 @@ class CarRentalContract(models.Model):
             }
 
             inv_id = self.env['account.move'].create(inv_data)
-        
+
             action = self.env.ref('account.action_move_out_invoice_type')
             result = {
                 'name': action.name,
@@ -521,7 +521,7 @@ class CarRentalContract(models.Model):
                 'res_model': 'account.move',
             }
             return result
-    
+
     def action_send_quote(self):
         check_availability, _, _ = self._check_availability()
         if not check_availability:
@@ -557,7 +557,7 @@ class CarRentalContract(models.Model):
         self.name = self.env['ir.sequence'] \
             .with_context(ir_sequence_date=order_date).next_by_code(
             sequence_code)
-        
+
         if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_send_booking'):
             reservation_template = self.env.ref('fleet_rental.mail_template_reserved')
             reservation_template.send_mail(self.id, force_send=True)
@@ -665,7 +665,7 @@ class CarRentalContract(models.Model):
         self.first_payment_inv = inv_id.id
 
         product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))], 
+            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))],
             limit=1)
 
         if product.property_account_income_id.id:
@@ -788,9 +788,9 @@ class CarRentalContract(models.Model):
                     ),
                     'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Deposit : {self.car_deposit}<br/>Pick up : {self.pickup_location} at {self.rent_start_date}<br/>Obs : {self.notes}'''
                 }
-            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
-                                 self.pickup_location, 
-                                 self.rent_start_date, 
+            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
+                                 self.pickup_location,
+                                 self.rent_start_date,
                                  self.sales_person.id,
                                  self.handle_pickup.id,
                                  self.customer_id.name,
@@ -823,9 +823,9 @@ class CarRentalContract(models.Model):
                     ),
                     'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Drop off : {self.dropoff_location} ({self.rent_end_date})'''
                 }
-            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name, 
-                        self.dropoff_location, 
-                        self.rent_end_date, 
+            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
+                        self.dropoff_location,
+                        self.rent_end_date,
                         self.sales_person.id,
                         self.handle_dropoff.id,
                         self.customer_id.name,
@@ -847,7 +847,7 @@ class CarRentalContract(models.Model):
         """
         self.reserved_fleet_id.unlink()
         self.state = "draft"
-  
+
     def _get_contract_filename(self):
         return  ("contract_%s.pdf" % self.name.replace('/', '_')).lower()
 
