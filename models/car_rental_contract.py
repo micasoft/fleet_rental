@@ -331,7 +331,7 @@ class CarRentalContract(models.Model):
             Perform fleet scheduling operations, including creating invoices,
             managing recurring data, and sending email notifications.
         """
-        for record in self.search([('state', 'in', ['reserved', 'running'])]):
+        for record in self.search([('state', 'in', ['reserved', 'running', 'invoice'])]):
 
             start_date = datetime.strptime(str(record.rent_start_date),
                                            DATE_FORMAT).date()
@@ -360,10 +360,10 @@ class CarRentalContract(models.Model):
                 self._logger.info(f"{record.id} moved to checking")
                 record.state = "checking"
 
-        #Close the day
-        if record.state == 'invoice':
-            self._logger.info(f"{record.id} moved to done")
-            record.state = "done"
+            #Close the day
+            if record.state == 'invoice':
+                self._logger.info(f"{record.id} moved to done")
+                record.state = "done"
 
     @api.model
     def next_event(self):
