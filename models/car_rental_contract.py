@@ -23,6 +23,7 @@ import logging
 
 from datetime import datetime, date, timedelta
 from odoo import api, fields, models, _
+from odoo.tools import format_datetime
 from odoo.exceptions import UserError, ValidationError
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -91,6 +92,9 @@ class CarRentalContract(models.Model):
                                   required=True,
                                   default=str(date.today()),
                                   help="Start date of contract")
+    rent_start_date_locale = fields.Char(compute='_start_date_locale',
+                                         string="Rent Start Date (locale)",
+                                         copy=False)
     calendar_start_date_id = fields.Many2one('calendar.event',
                                         copy=False)
     calendar_start_date_hash = fields.Char(string="Calendar end data hash",
@@ -101,6 +105,9 @@ class CarRentalContract(models.Model):
                                 required=True,
                                 help="End date of contract",
                                 tracking=True)
+    rent_end_date_locale = fields.Char(compute='_end_date_locale',
+                                       string="Rent End Date (locale)",
+                                       copy=False)
     calendar_end_date_id = fields.Many2one('calendar.event',
                                         copy=False)
     calendar_end_date_hash = fields.Char(string="Calendar end data hash",
@@ -238,6 +245,12 @@ class CarRentalContract(models.Model):
         """
         self.invoice_count = self.env['account.move'].search_count(
             [('fleet_rent_id', '=', self.id)])
+
+    def _start_date_locale(self):
+        self.rent_start_date_locale = format_datetime(self.env, self.rent_start_date, dt_format=False)
+
+    def _end_date_locale(self):
+        self.rent_end_date_locale = format_datetime(self.env, self.rent_end_date, dt_format=False)
 
     @api.onchange('vehicle_id', 'contract_days')
     def _car_cost_per_day(self):
