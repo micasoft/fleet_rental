@@ -188,6 +188,9 @@ class CarRentalContract(models.Model):
                                      help="Person in charge of handle the drop off",
                                      default=lambda self: self.env.user.partner_id.id)
 
+    soft_deleted = fields.Boolean(default=False,
+                                 store=True)
+
 
     def action_run(self):
         """
@@ -885,3 +888,9 @@ class CarRentalContract(models.Model):
             'res_id': self.id,
             'mimetype': 'application/pdf',
         }).id)]
+
+    def unlink(self):
+        for record in self:
+            record.soft_deleted=True
+            self._logger.info(f"The contract {record.id} was soft deleted!")
+            return True
