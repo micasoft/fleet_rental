@@ -264,7 +264,13 @@
         <field name="model">car.rental.contract</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="car_contract_result" decoration-info="state == 'draft'">
+            <list string="car_contract_result"
+                decoration-info="state == 'draft'"
+                decoration-warning="state == 'running'"
+                decoration-danger="state == 'cancel'"
+                decoration-success="state == 'done'"
+
+                default_order="rent_start_date desc">
                 <field name="name"/>
                 <field name="customer_id" string="Customer"/>
                 <field name="vehicle_id"/>
@@ -280,7 +286,7 @@
         <field name="name">car.rental.contract.calendar</field>
         <field name="model">car.rental.contract</field>
         <field name="arch" type="xml">
-            <calendar string="Car Rental Reserved" mode="month" date_start="rent_start_date" date_stop="rent_end_date" color="state" event_limit="5" quick_create="0" create="1" delete="0">
+            <calendar string="Car Rental Reserved" mode="week" date_start="rent_start_date" date_stop="rent_end_date" color="state" event_limit="5" quick_create="0" create="1" delete="0">
                 <field name="vehicle_id"/>
                 <field name="customer_id"/>
                 <field name="pickup_location"/>
@@ -291,11 +297,26 @@
         </field>
     </record>
 
+
+    <record id="iew_car_rental_contract_search" model="ir.ui.view">
+        <field name="name">car.rental.contract.search</field>
+        <field name="model">car.rental.contract</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter string="In Progress"
+                        name="car_rental_in_progress_filter"
+                        domain="[('state', 'not in', ['cancel', 'done'])]"
+                        />
+            </search>
+        </field>
+    </record>
+
 <!--    Action rental contract-->
     <record id="action_car_rental_contract" model="ir.actions.act_window">
         <field name="name">Rental Contract</field>
         <field name="res_model">car.rental.contract</field>
-        <field name="view_mode">calendar,list,form</field>
+        <field name="view_mode">list,calendar,form</field>
+        <field name="context">{'search_default_car_rental_in_progress_filter': 1}</field>
     </record>
 
     <menuitem name="Fleet Rental" id="fleet.menu_root" sequence="30"
