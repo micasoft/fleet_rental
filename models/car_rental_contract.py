@@ -584,9 +584,15 @@ class CarRentalContract(models.Model):
            Update the state to "cancel" and delete the associated reserved
            fleet ID if it exists.
        """
-        self.state = "cancel"
         if self.reserved_fleet_id:
             self.reserved_fleet_id.unlink()
+
+        if self.calendar_start_date_id:
+            self.calendar_start_date_id.unlink()
+
+        if self.calendar_end_date_id:
+            self.calendar_end_date_id.unlink()
+        self.state = "cancel"
 
     def force_checking(self):
         """
@@ -745,6 +751,7 @@ class CarRentalContract(models.Model):
                 'date_to': self.rent_end_date,
             })
         self.read_only = False
+        self.sync_calendar_end()
 
     @api.constrains('rent_end_date')
     def validate_on_read_only(self):
@@ -804,20 +811,25 @@ class CarRentalContract(models.Model):
                     ),
                     'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Deposit : {self.car_deposit}<br/>Pick up : {self.pickup_location} at {self.rent_start_date}<br/>Obs : {self.notes}'''
                 }
-            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
+            ch = str(hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
                                  self.pickup_location,
                                  self.rent_start_date,
                                  self.sales_person.id,
                                  self.handle_pickup.id,
                                  self.customer_id.name,
                                  self.customer_id.phone,
-                                 self.customer_id.mobile))
+                                 self.customer_id.mobile)))
             if not self.calendar_start_date_id.id:
-                self.calendar_start_date_id = self.env['calendar.event'].create(calendar_start_date_val)
+                self.calendar_start_date_id = self.env['calendar.event'].with_user(
+                    self.env['res.users'].browse(1)).with_context(
+                        mail_notify_author=True).create(calendar_start_date_val)
                 self.calendar_start_date_hash = ch
                 self._logger.debug("Sync Calendar_start create event")
             elif self.calendar_start_date_hash != ch:
-                self.calendar_start_date_id.write(calendar_start_date_val)
+                self._logger.debug(f"Sync Calendar_start update {self.calendar_start_date_hash} != {ch}")
+                self.calendar_start_date_id.with_user(
+                    self.env['res.users'].browse(1)).with_context(
+                        mail_notify_author=True).write(calendar_start_date_val)
                 self.calendar_start_date_hash = ch
                 self._logger.debug("Sync Calendar_start update event")
 
@@ -839,20 +851,25 @@ class CarRentalContract(models.Model):
                     ),
                     'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Drop off : {self.dropoff_location} ({self.rent_end_date})'''
                 }
-            ch =  hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
+            ch =  str(hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
                         self.dropoff_location,
                         self.rent_end_date,
                         self.sales_person.id,
                         self.handle_dropoff.id,
                         self.customer_id.name,
                         self.customer_id.phone,
-                        self.customer_id.mobile))
+                        self.customer_id.mobile)))
             if not self.calendar_end_date_id.id:
-                self.calendar_end_date_id= self.env['calendar.event'].create(calendar_end_date_val)
+                self.calendar_end_date_id= self.env['calendar.event'].with_user(
+                    self.env['res.users'].browse(1)).with_context(
+                        mail_notify_author=True).create(calendar_end_date_val)
                 self.calendar_end_date_hash = ch
                 self._logger.debug("Sync Calendar_end create event")
             elif self.calendar_end_date_hash != ch:
-                self.calendar_end_date_id.write(calendar_end_date_val)
+                self._logger.debug(f"Sync Calendar_end update {self.calendar_end_date_hash} != {ch}")
+                self.calendar_end_date_id.with_user(
+                    self.env['res.users'].browse(1)).with_context(
+                        mail_notify_author=True).write(calendar_end_date_val)
                 self.calendar_end_date_hash = ch
                 self._logger.debug("Sync Calendar_end update event")
 
@@ -891,6 +908,16 @@ class CarRentalContract(models.Model):
 
     def unlink(self):
         for record in self:
+
+            if record.reserved_fleet_id:
+                record.reserved_fleet_id.unlink()
+
+            if record.calendar_start_date_id:
+                record.calendar_start_date_id.unlink()
+
+            if record.calendar_end_date_id:
+                record.calendar_end_date_id.unlink()
+
             record.soft_deleted=True
             self._logger.info(f"The contract {record.id} was soft deleted!")
-            return True
+        return True

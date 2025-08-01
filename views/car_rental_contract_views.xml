@@ -158,7 +158,7 @@
                                    readonly="((state not in ['draft', 'reserved']) and (read_only == False))"
                                    domain="[('employee','=', True)]"/>
                             <field name="dropoff_location"
-                                   readonly="state not in ['draft']"/>
+                                   readonly="((state not in ['draft', 'reserved']) and (read_only == False))"/>
                             <field name="handle_dropoff"
                                    readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"
                                    domain="[('employee','=', True)]"/>
