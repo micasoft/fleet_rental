@@ -50,7 +50,10 @@
     ],
     'assets': {
         'web.assets_backend': [
-        ],
+            'fleet_rental/static/src/css/attachment_preview.css',
+            'fleet_rental/static/src/js/many2many_preview.js',
+            'fleet_rental/static/src/xml/attachment_preview.xml'
+        ]
     },
     'images': ['static/description/banner.jpg'],
     'license': 'AGPL-3',

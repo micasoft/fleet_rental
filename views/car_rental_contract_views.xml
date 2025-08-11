@@ -179,7 +179,7 @@
                         </group>
                         <group>
                             <field name="attachment_ids"
-                                   widget="many2many_binary"
+                                   widget="fleet_rental_attachment_preview"
                                    class="oe_inline"/>
                         </group>
                     </group>
