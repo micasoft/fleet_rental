@@ -12,7 +12,7 @@
                         <group>
                             <field name="name"/>
                         </group>
-                        
+
                         <group>
                             <field name="unit"/>
                             <field name="price"/>
@@ -43,5 +43,5 @@
     </record>
 
     <menuitem id="menu_car_tools" parent="menu_car_parent" name="Accessories/Tools"
-              action="action_fleet_car_tools" sequence="3"/>
+              action="action_fleet_car_tools" sequence="4"/>
 </odoo>
