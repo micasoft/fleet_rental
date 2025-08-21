@@ -188,6 +188,20 @@ class CarRentalContract(models.Model):
                                      help="Person in charge of handle the drop off",
                                      default=lambda self: self.env.user.partner_id.id)
 
+    rent_pickup_date = fields.Datetime(string="Rent Pickup Date and time",
+                                  required=True,
+                                  default=str(date.today()),
+                                  help="Date and time where the car was pickup")
+
+    fuel_tunk_pickup = fields.Float(string="Fuel tunk pickup", default=0.0)
+
+    rent_dropoff_date = fields.Datetime(string="Rent Dropoff Date and time",
+                                  required=True,
+                                  default=str(date.today()),
+                                  help="Date and time where the car was drop off")
+
+    fuel_tunk_dropoff = fields.Float(string="Total", default=0.0)
+
     soft_deleted = fields.Boolean(default=False,
                                  store=True)
 
@@ -920,4 +934,8 @@ class CarRentalContract(models.Model):
 
             record.soft_deleted=True
             self._logger.info(f"The contract {record.id} was soft deleted!")
+        return True
+
+    def action_save_pickup(self):
+        self.ensure_one()
         return True

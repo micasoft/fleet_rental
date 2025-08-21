@@ -9,7 +9,6 @@
         <field name="arch" type="xml">
             <list string="car_contract_result"
                 default_order="rent_start_date desc">
-                <field name="name"/>
                 <field name="driver_id" string="Driver"/>
                 <field name="vehicle_id"/>
                 <field name="rent_start_date"/>
@@ -38,12 +37,15 @@
         <field name="name">car.rental.contract.pickup.form</field>
         <field name="model">car.rental.contract</field>
         <field name="arch" type="xml">
-            <form string="My Model (Read Only)" create="false" edit="false" delete="false">
+            <form string="My Model (Read Only)" create="false" delete="false">
                 <sheet>
                     <group>
                         <field name="id" />
                         <field name="state" readonly="1" />
+                        <field name="rent_pickup_date" />
+                        <field name="fuel_tunk_pickup" widget="progressbar" options="{'title': 'Fuel', 'max_value': 100.0, 'editable': true }"/>
                     </group>
+                    <button name="action_save_pickup" type="object" string="Save Progress" class="btn-primary"/>
                 </sheet>
             </form>
         </field>
@@ -55,11 +57,12 @@
         <field name="res_model">car.rental.contract</field>
         <field name="view_mode">list,calendar,form</field>
         <field name="view_ids"
-            eval="[(5, 0, 0),
+        eval="[(5, 0, 0),
         (0, 0, {'view_mode': 'list', 'view_id': ref('car_rental_contract_pickup_list')}),
         (0, 0, {'view_mode': 'calendar', 'view_id': ref('car_rental_contract_pickup_calendar')}),
         (0, 0, {'view_mode': 'form', 'view_id': ref('car_rental_contract_pickup_form')})]" />
 
+        <field name="domain">[('state','=','reserved')]</field>
         <!-- Restrict to specific group -->
         <field name="groups_id" eval="[(6, 0, [ref('fleet_rental.fleet_car_rental_group_limited')])]"/>
     </record>

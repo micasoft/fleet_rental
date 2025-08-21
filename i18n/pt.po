@@ -20,7 +20,7 @@ msgstr ""
 #. module: fleet_rental
 #: model:ir.ui.menu,name:fleet_rental.menu_car_parent
 msgid "Fleet Rental Management"
-msgstr "Gestão de aluguer"
+msgstr "Gestão de alugueres"
 
 #. module: fleet_rental
 #: model:ir.ui.menu,name:fleet_rental.menu_car_rental_contract
@@ -36,6 +36,11 @@ msgstr "Entrega de Viatura(s)"
 #: model:ir.actions.act_window,name:fleet_rental.action_car_rental_contract
 msgid "Rental Contract"
 msgstr "Contrato de aluguer"
+
+#. module: fleet_rental
+#: model:ir.actions.act_window,name:fleet_rental.action_car_rental_contract_pickup
+msgid "Rental Contract"
+msgstr "Entrega de Viatura(s)"
 
 #. module: fleet_rental
 #: model:ir.ui.menu,name:fleet_rental.menu_car_tools

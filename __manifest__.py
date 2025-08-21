@@ -40,7 +40,7 @@
         'data/ir_cron_data.xml',
         'data/mail_template_data.xml',
         'views/car_rental_contract_views.xml',
-        'views/car_rental_contract_pickup.xml',
+        'views/car_rental_contract_pickup_views.xml',
         'views/car_tools_views.xml',
         'views/res_config_settings_views.xml',
         'views/res_partner_views.xml',
