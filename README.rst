@@ -20,7 +20,8 @@ Prerequisites
 -------------
 - Docker with Compose v2, and ``make``.
 - A database created by you on the LAN Postgres server: UTF8, owned by the
-  role Odoo will use. The stack never creates or drops databases.
+  role Odoo will use. Only ``make restore`` drops/recreates it (that one
+  database, after confirmation).
 - ``pg_hba.conf`` on that server allows this machine for that role/database.
 
 Setup
@@ -40,6 +41,7 @@ Setup
    - restore a backup (gzipped plain SQL, e.g. ``pg_dump -U postgres DB | gzip``)::
 
        make restore FILE=path/to/dump.sql.gz
+       make restore-filestore FILE=path/to/backup-folder   # optional: attachments
        make update
 
    - empty database: ``make init`` (installs ``fleet_rental``, no demo data)
@@ -48,38 +50,61 @@ Setup
 
 Commands
 --------
-==================  ==============================================================
-``make up``         start Odoo in the background
-``make down``       stop Odoo
-``make logs``       follow the Odoo log
-``make init``       install ``fleet_rental`` into an empty database
-``make update``     apply code changes to the database (``-u fleet_rental``);
-                    restarts Odoo if it was running
-``make shell``      Odoo shell on the database
-``make restore``    ``FILE=dump.sql.gz``: replace ``PG_DATABASE`` with the dump
-                    (see below)
-==================  ==============================================================
+============================  ================================================================
+``make up``                   start Odoo in the background
+``make down``                 stop Odoo
+``make logs``                 follow the Odoo log
+``make init``                 install ``fleet_rental`` into an empty database
+``make update``               apply code changes to the database (``-u fleet_rental``);
+                              restarts Odoo if it was running
+``make shell``                Odoo shell on the database
+``make restore``              ``FILE=dump.sql.gz``: replace ``PG_DATABASE`` with the dump
+``make restore-filestore``    ``FILE=folder|manifest.txt|tar.gz``: replace the dev filestore
+============================  ================================================================
 
 Restoring a backup
 ------------------
 ``make restore FILE=...`` is interactive and must be run from a terminal
 (Odoo must be stopped: ``make down``). It asks you to type the database name
 to confirm, then the password of ``PG_ADMIN_USER`` (default ``postgres``);
-that password is never stored. It then:
+that password is never stored.
 
-1. drops ``PG_DATABASE`` (only that name; system databases are refused) and
-   recreates it as UTF8, owned by ``PG_USER``;
-2. imports the dump as the admin user, skipping ``OWNER TO``/``GRANT`` lines
-   that reference production roles;
-3. hands every table, sequence, view, function and the ``public`` schema to
-   ``PG_USER``;
-4. runs ``odoo neutralize``: scheduled actions and outgoing mail servers are
+Before anything is dropped, the file is checked: valid gzip, plain-SQL
+``pg_dump`` (custom/tar formats are refused), complete (has the
+``dump complete`` trailer), and no statements that act outside one database
+(``\connect``, ``\!``, ``CREATE/DROP/ALTER DATABASE|ROLE|USER`` — i.e. dumps
+made with ``pg_dump -C`` or ``pg_dumpall`` are refused). Then:
+
+1. checks that ``PG_USER`` exists, then drops ``PG_DATABASE`` (only that name;
+   system databases are refused) and recreates it as UTF8, owned by
+   ``PG_USER``. The admin login is used for nothing else;
+2. imports the dump **as** ``PG_USER`` in a single transaction, skipping
+   ``OWNER TO``/``GRANT``/``REVOKE`` lines that reference production roles
+   (outside table data). Every object is owned by ``PG_USER``; if the import
+   fails, the database is left empty rather than half-imported;
+3. runs ``odoo neutralize``: scheduled actions and outgoing mail servers are
    disabled so the copy never emails real customers. Only Odoo's internal
    auto-vacuum job stays active.
 
-A SQL dump has no filestore: attachments, generated PDFs and images from
-production are missing in the copy. Run ``make update`` afterwards so the
-database matches this repo's code.
+A SQL dump has no filestore: restore it with ``make restore-filestore``.
+Run ``make update`` afterwards so the database matches this repo's code.
+
+Restoring the filestore
+-----------------------
+``make restore-filestore FILE=...`` takes an ``odoo-data`` backup of
+production's ``/var/lib/odoo``: the backup folder, its ``manifest.txt``, or
+the ``.tar.gz`` itself. It is interactive (type the database name to
+confirm) and Odoo must be stopped.
+
+- Only ``filestore/<name>/`` is extracted; ``sessions/`` (production login
+  sessions) and anything else in the archive are ignored.
+- ``<name>`` is detected from the archive (e.g. ``prod``); if the archive
+  holds several, choose with ``SOURCE_DB=name``.
+- It replaces ``filestore/<PG_DATABASE>`` in the local Docker volume. Nothing
+  on the Postgres server changes.
+- If the database is reachable, it reports how many attachments the database
+  references that are missing from the filestore (a dump and filestore from
+  different dates).
 
 Code changes
 ------------

@@ -11,6 +11,7 @@
 #   shell [args]     odoo shell
 #   psql [args]      psql connected to $PG_DATABASE
 #   restore          used by `make restore` (see dev/restore.sh)
+#   restore-filestore SRC   used by `make restore-filestore` (see dev/restore-filestore.sh)
 set -euo pipefail
 
 SECRET_FILE=/run/secrets/pg_password
@@ -26,8 +27,13 @@ if [ ! -s "$SECRET_FILE" ]; then
     echo "missing or empty ${SECRET_FILE} (write the password to .secrets/pg_password)" >&2
     exit 1
 fi
-# $(< file) strips trailing newlines.
+# $(< file) strips trailing newlines; also drop CR (file saved with CRLF).
 PGPASSWORD="$(< "$SECRET_FILE")"
+PGPASSWORD="${PGPASSWORD//$'\r'/}"
+if [ -z "${PGPASSWORD//[[:space:]]/}" ]; then
+    echo "${SECRET_FILE} contains only whitespace" >&2
+    exit 1
+fi
 export PGPASSWORD
 # Fail fast on an unreachable host instead of hanging (libpq, also used by Odoo).
 export PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-10}"
@@ -50,10 +56,14 @@ DB_ARGS=(
 case "${1:-}" in
     psql)
         shift
-        exec env LC_ALL=C.UTF-8 "${RUN[@]}" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE" "$@"
+        exec env LC_ALL=C.UTF-8 "${RUN[@]}" psql -w -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE" "$@"
         ;;
     restore)
         exec env LC_ALL=C.UTF-8 "${RUN[@]}" /dev-restore.sh
+        ;;
+    restore-filestore)
+        shift
+        exec env LC_ALL=C.UTF-8 "${RUN[@]}" /dev-restore-filestore.sh "$@"
         ;;
     shell)
         shift

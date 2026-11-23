@@ -1,0 +1,34 @@
+#!/bin/bash
+# Host side of `make restore-filestore FILE=... [SOURCE_DB=...]`.
+# Replaces the dev filestore of $PG_DATABASE (local Docker volume only) with
+# filestore/<SOURCE_DB>/ from an odoo-data backup archive.
+set -euo pipefail
+
+FILE="${FILE:-}"
+[ -n "$FILE" ] || { echo "usage: make restore-filestore FILE=backup-folder|manifest.txt|odoo-data.tar.gz [SOURCE_DB=name]" >&2; exit 1; }
+[ -e "$FILE" ] || { echo "no such file: $FILE" >&2; exit 1; }
+FILE="$(realpath "$FILE")"
+cd "$(dirname "$0")/.."
+
+echo "checking $FILE ..." >&2
+{ read -r archive; read -r source_db; } < <(dev/filestore-source "$FILE" "${SOURCE_DB:-}")
+[ -n "${source_db:-}" ] || exit 1
+
+set -a; . ./.env; set +a
+
+server=$(docker ps -q --filter label=com.docker.compose.project=fleet_rental_dev \
+    --filter label=com.docker.compose.service=odoo --filter label=com.docker.compose.oneoff=False)
+if [ -n "$server" ]; then
+    echo "Odoo is running; stop it first with: make down" >&2
+    exit 1
+fi
+
+echo "This REPLACES the dev filestore of '$PG_DATABASE' with filestore/$source_db from $archive." >&2
+if [ ! -t 0 ]; then
+    echo "make restore-filestore is interactive: run it from a terminal" >&2
+    exit 1
+fi
+read -r -p "Type the database name to confirm: " confirm
+[ "$confirm" = "$PG_DATABASE" ] || { echo "confirmation does not match, aborted" >&2; exit 1; }
+
+docker compose run --rm -T odoo restore-filestore "$source_db" < "$archive"

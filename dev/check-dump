@@ -1,0 +1,29 @@
+#!/bin/bash
+# Validate a gzipped plain-SQL pg_dump before anything is dropped.
+# Usage: dev/check-dump FILE     (exit 0 = OK; messages on stderr)
+set -euo pipefail
+FILE="$1"
+
+[ -f "$FILE" ] || { echo "no such file: $FILE" >&2; exit 1; }
+gzip -t "$FILE" 2>/dev/null || { echo "not a valid/complete gzip file: $FILE" >&2; exit 1; }
+
+# Read into variables (no early-exit readers in a pipefail pipeline: SIGPIPE).
+head_part=$(gunzip -c "$FILE" | head -c 65536 | tr -d '\000' || true)
+tail_part=$(gunzip -c "$FILE" | tail -n 20 | tr -d '\000')
+grep -q '^-- PostgreSQL database dump' <<< "$head_part" \
+    || { echo "not a plain-SQL pg_dump (custom/tar format or other file?): $FILE" >&2; exit 1; }
+grep -q '^-- PostgreSQL database dump complete' <<< "$tail_part" \
+    || { echo "dump is truncated (no 'dump complete' trailer): $FILE" >&2; exit 1; }
+
+# Statements that would act outside the target database. Checked outside COPY
+# data blocks only (data rows may legitimately contain such text).
+bad=$(gunzip -c "$FILE" | awk '
+    in_copy { if ($0 == "\\.") in_copy = 0; next }
+    /^COPY .* FROM stdin;$/ { in_copy = 1; next }
+    /^\\(connect|c|!)([ \t]|$)/ || /^(CREATE|DROP|ALTER) (DATABASE|ROLE|USER) / { print NR": "$0 }
+' | head -n 5 || true)
+if [ -n "$bad" ]; then
+    echo "refusing: dump contains statements outside a single database (made with pg_dump -C or pg_dumpall?):" >&2
+    echo "$bad" | cut -c1-120 >&2
+    exit 1
+fi

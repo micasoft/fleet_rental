@@ -84,7 +84,17 @@ drops databases" for `PG_DATABASE` only.
   `pg_dump -U postgres DB | gzip`).
 - Interactive only: confirm by typing the DB name; admin (`PG_ADMIN_USER`,
   default `postgres`) password prompted, never stored.
-- Drop + recreate `PG_DATABASE` owned by `PG_USER`, import as admin skipping
-  production owner/grant lines, hand all objects to `PG_USER`.
+- Validate the dump first (gzip, plain format, complete, no
+  `\connect`/`\!`/database- or role-level statements).
+- Admin used only to check the role and drop + recreate `PG_DATABASE` owned by
+  `PG_USER`; the dump is imported as `PG_USER` in a single transaction,
+  skipping production owner/grant lines.
 - Always `odoo neutralize` the copy.
 - Refuses while Odoo is running, and refuses system databases.
+
+## Addendum (2026-11-23): `make restore-filestore`
+- `make restore-filestore FILE=<backup folder | manifest.txt | odoo-data.tar.gz> [SOURCE_DB=name]`.
+- Extracts only `filestore/<source>/` (never `sessions/`) into
+  `filestore/$PG_DATABASE` on the local Docker volume, replacing it.
+- Interactive confirmation; Odoo must be stopped. Reports attachments the DB
+  references that are missing from the filestore.

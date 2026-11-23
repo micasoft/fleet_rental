@@ -1,0 +1,39 @@
+#!/bin/bash
+# Resolve and validate a filestore backup.
+# Usage: dev/filestore-source PATH [SOURCE_DB]
+#   PATH: backup folder, its manifest.txt, or the odoo-data .tar.gz itself.
+# Prints two lines on success: the absolute archive path, then the source DB name.
+set -euo pipefail
+path="$1"; source_db="${2:-}"
+
+if [ -d "$path" ]; then
+    dir="$path"
+elif [ "$(basename "$path")" = "manifest.txt" ]; then
+    dir="$(dirname "$path")"
+else
+    dir=""
+    archive="$path"
+fi
+if [ -n "$dir" ]; then
+    shopt -s nullglob
+    candidates=("$dir"/*.tar.gz)
+    [ "${#candidates[@]}" -eq 1 ] || { echo "expected exactly one .tar.gz in $dir, found ${#candidates[@]}" >&2; exit 1; }
+    archive="${candidates[0]}"
+fi
+[ -f "$archive" ] || { echo "no such file: $archive" >&2; exit 1; }
+archive="$(realpath "$archive")"
+gzip -t "$archive" 2>/dev/null || { echo "not a valid/complete gzip file: $archive" >&2; exit 1; }
+
+mapfile -t dbs < <(tar -tzf "$archive" | sed -nE 's#^(\./)?filestore/([^/]+)/.*#\2#p' | sort -u)
+[ "${#dbs[@]}" -gt 0 ] || { echo "no filestore/<db>/ folder in $archive" >&2; exit 1; }
+if [ -z "$source_db" ]; then
+    [ "${#dbs[@]}" -eq 1 ] || { echo "archive has several filestores (${dbs[*]}); choose one with SOURCE_DB=" >&2; exit 1; }
+    source_db="${dbs[0]}"
+else
+    printf '%s\n' "${dbs[@]}" | grep -qxF "$source_db" \
+        || { echo "no filestore/$source_db/ in archive (has: ${dbs[*]})" >&2; exit 1; }
+fi
+[[ "$source_db" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "unexpected filestore name: $source_db" >&2; exit 1; }
+
+echo "$archive"
+echo "$source_db"
