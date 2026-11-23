@@ -28,6 +28,8 @@ fi
 # $(< file) strips trailing newlines.
 PGPASSWORD="$(< "$SECRET_FILE")"
 export PGPASSWORD
+# Fail fast on an unreachable host instead of hanging (libpq, also used by Odoo).
+export PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-10}"
 
 # Drop privileges for everything we exec.
 RUN=()
@@ -47,7 +49,7 @@ DB_ARGS=(
 case "${1:-}" in
     psql)
         shift
-        exec "${RUN[@]}" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE" "$@"
+        exec env LC_ALL=C.UTF-8 "${RUN[@]}" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE" "$@"
         ;;
     shell)
         shift
