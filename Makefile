@@ -10,11 +10,11 @@ SERVER_ID = docker ps -q --filter label=com.docker.compose.project=fleet_rental_
 help:
 	@echo "check-env   verify .env and .secrets/pg_password exist"
 	@echo "psql-check  test the database connection and credentials"
-	@echo "up          start Odoo in the background (http://127.0.0.1:8369)"
+	@echo "up          run Odoo in the foreground, Ctrl-C stops it (http://127.0.0.1:8369)"
 	@echo "down        stop Odoo"
 	@echo "logs        follow Odoo logs"
 	@echo "init        install $(MODULE) into an empty database"
-	@echo "update      update $(MODULE) to the code in this repo (restarts Odoo if running)"
+	@echo "update      update $(MODULE) to the code in this repo (stops Odoo if running)"
 	@echo "shell       open an Odoo shell on the database"
 	@echo "restore     FILE=dump.sql.gz: drop PG_DATABASE, import the dump, set owner, neutralize"
 	@echo "restore-filestore  FILE=backup-folder|manifest.txt|odoo-data.tar.gz [SOURCE_DB=name]"
@@ -27,7 +27,7 @@ psql-check: check-env
 	$(COMPOSE) run --rm odoo psql -c "select current_user, current_database(), version();"
 
 up: check-env
-	$(COMPOSE) up -d
+	$(COMPOSE) up
 
 down: check-env
 	$(COMPOSE) down
@@ -42,7 +42,7 @@ update: check-env
 	@running=$$($(SERVER_ID)); \
 	if [ -n "$$running" ]; then $(COMPOSE) stop odoo; fi; \
 	$(COMPOSE) run --rm odoo -u $(MODULE) --stop-after-init; rc=$$?; \
-	if [ -n "$$running" ]; then $(COMPOSE) start odoo; fi; \
+	if [ -n "$$running" ]; then echo "Odoo was stopped for the update: run make up again"; fi; \
 	exit $$rc
 
 shell: check-env

@@ -51,12 +51,12 @@ Setup
 Commands
 --------
 ============================  ================================================================
-``make up``                   start Odoo in the background
+``make up``                   run Odoo in the foreground (log in the terminal; Ctrl-C stops it)
 ``make down``                 stop Odoo
 ``make logs``                 follow the Odoo log
 ``make init``                 install ``fleet_rental`` into an empty database
 ``make update``               apply code changes to the database (``-u fleet_rental``);
-                              restarts Odoo if it was running
+                              stops Odoo if it was running
 ``make shell``                Odoo shell on the database
 ``make restore``              ``FILE=dump.sql.gz``: replace ``PG_DATABASE`` with the dump
 ``make restore-filestore``    ``FILE=folder|manifest.txt|tar.gz``: replace the dev filestore
