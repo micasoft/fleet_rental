@@ -45,6 +45,17 @@ if [ "$(id -u)" = "0" ]; then
     export HOME=/var/lib/odoo
 fi
 
+# Extra addons (EXTRA_ADDONS_PATH): appended after this repo, so the repo's
+# fleet_rental always wins over another copy.
+EXT=/mnt/extra-addons-ext
+ADDONS_ARGS=()
+if compgen -G "$EXT/*/__manifest__.py" >/dev/null; then
+    ADDONS_ARGS=(--addons-path "/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons,$EXT")
+    if [ -e "$EXT/fleet_rental" ]; then
+        echo "warning: EXTRA_ADDONS_PATH also has fleet_rental; ignored, this repo's copy is used" >&2
+    fi
+fi
+
 DB_ARGS=(
     --db_host "$PG_HOST"
     --db_port "$PG_PORT"
@@ -67,9 +78,9 @@ case "${1:-}" in
         ;;
     shell)
         shift
-        exec "${RUN[@]}" odoo shell "${DB_ARGS[@]}" "$@"
+        exec "${RUN[@]}" odoo shell "${ADDONS_ARGS[@]}" "${DB_ARGS[@]}" "$@"
         ;;
     *)
-        exec "${RUN[@]}" odoo "${DB_ARGS[@]}" "$@"
+        exec "${RUN[@]}" odoo "${ADDONS_ARGS[@]}" "${DB_ARGS[@]}" "$@"
         ;;
 esac

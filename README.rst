@@ -119,6 +119,10 @@ Options (``.env``)
 - ``ODOO_BIND`` (default ``127.0.0.1``; ``0.0.0.0`` exposes Odoo to the LAN)
 - ``PGCONNECT_TIMEOUT`` (default ``10`` seconds)
 - ``PG_ADMIN_USER`` (default ``postgres``), used only by ``make restore``
+- ``EXTRA_ADDONS_PATH``: a host folder with other addons the database needs
+  (e.g. a production copy uses ``muk_web_*``). Mounted read-only and added to
+  the addons path *after* this repo, so this repo's ``fleet_rental`` always
+  wins over another copy. Restart (``make down && make up``) after changing it.
 
 Odoo runs with ``workers = 1``; see ``dev/odoo.conf``. With a single worker
 Odoo cannot render PDF reports (wkhtmltopdf calls back into the server);

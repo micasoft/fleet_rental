@@ -21,6 +21,8 @@ services:
       - ./dev/entrypoint.sh:/dev-entrypoint.sh:ro
       - ./dev/restore.sh:/dev-restore.sh:ro
       - ./dev/restore-filestore.sh:/dev-restore-filestore.sh:ro
+      # Other addons the database needs (e.g. muk_web_*), see EXTRA_ADDONS_PATH in .env.example
+      - ${EXTRA_ADDONS_PATH:-./dev/no-extra-addons}:/mnt/extra-addons-ext:ro
       - odoo_data:/var/lib/odoo
 
 secrets:
