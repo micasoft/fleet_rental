@@ -76,3 +76,15 @@ Runtime:
 - Whether `odoo:18` has watchdog; if so enable `--dev=reload,xml`.
 - Pinning the image (tag vs digest) — default `odoo:18.0`.
 - A `psql-check` target that verifies connectivity/credentials before `init`.
+
+## Addendum (2026-11-23): `make restore`
+Requested by the user after approval; supersedes "the stack never creates or
+drops databases" for `PG_DATABASE` only.
+- `make restore FILE=dump.sql.gz` (gzipped plain SQL, as produced by
+  `pg_dump -U postgres DB | gzip`).
+- Interactive only: confirm by typing the DB name; admin (`PG_ADMIN_USER`,
+  default `postgres`) password prompted, never stored.
+- Drop + recreate `PG_DATABASE` owned by `PG_USER`, import as admin skipping
+  production owner/grant lines, hand all objects to `PG_USER`.
+- Always `odoo neutralize` the copy.
+- Refuses while Odoo is running, and refuses system databases.

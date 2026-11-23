@@ -1,0 +1,37 @@
+#!/bin/bash
+# Host side of `make restore FILE=dump.sql.gz`.
+# Replaces $PG_DATABASE with the dump, owned by $PG_USER, neutralized.
+#
+# Interactive only: asks for confirmation (the database name) and for the
+# admin password (hidden). The admin password is never stored.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+FILE="${FILE:-}"
+[ -n "$FILE" ] || { echo "usage: make restore FILE=path/to/dump.sql.gz" >&2; exit 1; }
+[ -f "$FILE" ] || { echo "no such file: $FILE" >&2; exit 1; }
+
+set -a; . ./.env; set +a
+: "${PG_ADMIN_USER:=postgres}"
+
+server=$(docker ps -q --filter label=com.docker.compose.project=fleet_rental_dev \
+    --filter label=com.docker.compose.service=odoo --filter label=com.docker.compose.oneoff=False)
+if [ -n "$server" ]; then
+    echo "Odoo is running; stop it first with: make down" >&2
+    exit 1
+fi
+
+echo "This DROPS database '$PG_DATABASE' on $PG_HOST:$PG_PORT and replaces it with $FILE." >&2
+if [ ! -t 0 ]; then
+    echo "make restore is interactive: run it from a terminal" >&2
+    exit 1
+fi
+read -r -p "Type the database name to confirm: " confirm
+[ "$confirm" = "$PG_DATABASE" ] || { echo "confirmation does not match, aborted" >&2; exit 1; }
+
+read -r -s -p "Password for $PG_ADMIN_USER@$PG_HOST: " admin_password; echo >&2
+[ -n "$admin_password" ] || { echo "empty admin password" >&2; exit 1; }
+
+# printf is a builtin: the password never appears in a process argument list.
+{ printf '%s\n' "$admin_password"; gunzip -c "$FILE"; } \
+    | docker compose run --rm -T odoo restore

@@ -10,6 +10,7 @@
 #   <odoo args...>   run odoo
 #   shell [args]     odoo shell
 #   psql [args]      psql connected to $PG_DATABASE
+#   restore          used by `make restore` (see dev/restore.sh)
 set -euo pipefail
 
 SECRET_FILE=/run/secrets/pg_password
@@ -50,6 +51,9 @@ case "${1:-}" in
     psql)
         shift
         exec env LC_ALL=C.UTF-8 "${RUN[@]}" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE" "$@"
+        ;;
+    restore)
+        exec env LC_ALL=C.UTF-8 "${RUN[@]}" /dev-restore.sh
         ;;
     shell)
         shift

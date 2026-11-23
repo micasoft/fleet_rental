@@ -19,6 +19,7 @@ services:
       - .:/mnt/extra-addons/fleet_rental:ro
       - ./dev/odoo.conf:/etc/odoo/odoo.conf:ro
       - ./dev/entrypoint.sh:/dev-entrypoint.sh:ro
+      - ./dev/restore.sh:/dev-restore.sh:ro
       - odoo_data:/var/lib/odoo
 
 secrets:

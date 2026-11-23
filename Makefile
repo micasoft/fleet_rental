@@ -5,7 +5,7 @@ MODULE  := fleet_rental
 SERVER_ID = docker ps -q --filter label=com.docker.compose.project=fleet_rental_dev \
 	--filter label=com.docker.compose.service=odoo --filter label=com.docker.compose.oneoff=False
 
-.PHONY: help check-env psql-check up down logs init update shell
+.PHONY: help check-env psql-check up down logs init update shell restore
 
 help:
 	@echo "check-env   verify .env and .secrets/pg_password exist"
@@ -16,6 +16,7 @@ help:
 	@echo "init        install $(MODULE) into an empty database"
 	@echo "update      update $(MODULE) to the code in this repo (restarts Odoo if running)"
 	@echo "shell       open an Odoo shell on the database"
+	@echo "restore     FILE=dump.sql.gz: drop PG_DATABASE, import the dump, set owner, neutralize"
 
 check-env:
 	@test -f .env || { echo "missing .env: copy .env.example to .env and fill it in" >&2; exit 1; }
@@ -45,3 +46,6 @@ update: check-env
 
 shell: check-env
 	$(COMPOSE) run --rm odoo shell
+
+restore: check-env
+	@FILE="$(FILE)" ./dev/restore-db
