@@ -1,0 +1,59 @@
+#!/bin/bash
+# Entrypoint for the local dev stack.
+# Reads the connection from env (.env) and the password from a Docker secret,
+# exports it as PGPASSWORD (read by libpq) so it never appears in process args,
+# and pins Odoo to a single database.
+# Starts as root only to read the secret (the host file can stay chmod 600),
+# then drops to the image's unprivileged `odoo` user.
+#
+# Usage (container args):
+#   <odoo args...>   run odoo
+#   shell [args]     odoo shell
+#   psql [args]      psql connected to $PG_DATABASE
+set -euo pipefail
+
+SECRET_FILE=/run/secrets/pg_password
+
+for var in PG_HOST PG_PORT PG_USER PG_DATABASE; do
+    if [ -z "${!var:-}" ]; then
+        echo "missing ${var} in .env" >&2
+        exit 1
+    fi
+done
+
+if [ ! -s "$SECRET_FILE" ]; then
+    echo "missing or empty ${SECRET_FILE} (write the password to .secrets/pg_password)" >&2
+    exit 1
+fi
+# $(< file) strips trailing newlines.
+PGPASSWORD="$(< "$SECRET_FILE")"
+export PGPASSWORD
+
+# Drop privileges for everything we exec.
+RUN=()
+if [ "$(id -u)" = "0" ]; then
+    RUN=(setpriv --reuid=odoo --regid=odoo --init-groups)
+    export HOME=/var/lib/odoo
+fi
+
+DB_ARGS=(
+    --db_host "$PG_HOST"
+    --db_port "$PG_PORT"
+    --db_user "$PG_USER"
+    -d "$PG_DATABASE"
+    --db-filter "^${PG_DATABASE}\$"
+)
+
+case "${1:-}" in
+    psql)
+        shift
+        exec "${RUN[@]}" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE" "$@"
+        ;;
+    shell)
+        shift
+        exec "${RUN[@]}" odoo shell "${DB_ARGS[@]}" "$@"
+        ;;
+    *)
+        exec "${RUN[@]}" odoo "${DB_ARGS[@]}" "$@"
+        ;;
+esac

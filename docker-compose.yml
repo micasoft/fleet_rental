@@ -1,0 +1,29 @@
+# Local dev stack for fleet_rental. See README.rst "Local development".
+# Postgres is external (LAN): configure .env and .secrets/pg_password.
+name: fleet_rental_dev
+
+services:
+  odoo:
+    image: odoo:18
+    # root only to read the secret; the entrypoint drops to the odoo user
+    user: root
+    entrypoint: ["/dev-entrypoint.sh"]
+    command: ["--dev=reload,xml"]
+    env_file: .env
+    ports:
+      - "${ODOO_BIND:-127.0.0.1}:${ODOO_PORT:-8369}:8069"
+    mem_limit: 1g
+    secrets:
+      - pg_password
+    volumes:
+      - .:/mnt/extra-addons/fleet_rental:ro
+      - ./dev/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./dev/entrypoint.sh:/dev-entrypoint.sh:ro
+      - odoo_data:/var/lib/odoo
+
+secrets:
+  pg_password:
+    file: ./.secrets/pg_password
+
+volumes:
+  odoo_data:
