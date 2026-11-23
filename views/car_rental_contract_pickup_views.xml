@@ -38,12 +38,47 @@
         <field name="model">car.rental.contract</field>
         <field name="arch" type="xml">
             <form string="My Model (Read Only)" create="false" delete="false">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="reserved,running,checking" />
+                </header>
                 <sheet>
                     <group>
-                        <field name="id" />
-                        <field name="state" readonly="1" />
-                        <field name="rent_pickup_date" />
-                        <field name="fuel_tunk_pickup" widget="progressbar" options="{'title': 'Fuel', 'max_value': 100.0, 'editable': true }"/>
+                         <separator string="Contract Details"/>
+                         <group>
+                            <field name="customer_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
+                            <field name="driver_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
+                            <field name="driver_extra_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
+                            <field name="vehicle_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
+                        </group>
+                        <group>
+                            <field name="rent_start_date" readonly="1"/>
+                            <field name="pickup_location" readonly="1"/>
+                            <field name="rent_end_date" readonly="1"/>
+                            <field name="dropoff_location" readonly="1"/>
+                        </group>
+
+                        <separator string="Accessories/Tools" />
+                        <field name="list_line_tools" readonly="1" widget="html"/>
+
+                        <separator string="Pickup detail(s)"/>
+                        <group>
+                            <field name="rent_pickup_date" />
+                            <group><field name="meters_pickup_value" options="{'digits': (7,0)}"/></group>
+                            <group><field name="meters_pickup_unit" readonly="1" nolabel="1"/> </group>
+                            <field name="fuel_tunk_pickup" widget="progressbar" options="{'title': 'Fuel', 'max_value': 100.0, 'editable': true }"/>
+                        </group>
+                        <group>
+                            <field name="attachment_pickup_ids"
+                                   widget="fleet_rental_attachment_preview"
+                                   class="oe_inline"/>
+                        </group>
+                        <separator string="Signature"/>
+                        <group>
+                            <field name="signature_pickup" widget="signature" colspan="2"/>
+                        </group>
+                        <group>
+                            <field name="send_contract" colspan="2"/>
+                        </group>
                     </group>
                     <button name="action_save_pickup" type="object" string="Save Progress" class="btn-primary"/>
                 </sheet>

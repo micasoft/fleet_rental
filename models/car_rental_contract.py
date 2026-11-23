@@ -155,6 +155,9 @@ class CarRentalContract(models.Model):
                                      'contract_id', string="Checklist",
                                      help="Facilities/Accessories, That should"
                                           " verify when closing the contract.")
+    list_line_tools = fields.Html(string="Accessories/Tools",
+                                  compute='_compute_list_line_tools',
+                                  sanitize=False)
     tools_cost = fields.Float(string="Total (Accessories/Tools)", readonly=True,
                          copy=False)
     damage_cost = fields.Float(string="Damage Cost / Balance Amount",
@@ -194,6 +197,31 @@ class CarRentalContract(models.Model):
                                   help="Date and time where the car was pickup")
 
     fuel_tunk_pickup = fields.Float(string="Fuel tunk pickup", default=0.0)
+
+    odometer_pickup_id = fields.Many2one('fleet.vehicle.odometer',
+                                    string="Km(s) pickup",
+                                    tracking=True)
+
+    meters_pickup_value = fields.Float(string='Kilometrage pickup',
+                                    compute='_compute_meters_pickup_value',
+                                    inverse="_inverse_meters_pickup_value")
+
+    meters_pickup_unit = fields.Selection(string="Unit",
+                            related='odometer_pickup_id.unit',
+                            copy=False,
+                            readonly=True)
+
+    attachment_pickup_ids = fields.Many2many('ir.attachment',
+                            'car_rental_contract_pickup_ir_attachments_rel',
+                            'rental_id', 'attachment_id',
+                            string="Pickup attachments",
+                            help="Pictures during the pickup")
+
+    signature_pickup = fields.Binary("Signature")
+
+    send_contract = fields.Boolean(string="Send a contrat to client",
+                                 inverse="_inverse_send_contract",
+                                 default=False)
 
     rent_dropoff_date = fields.Datetime(string="Rent Dropoff Date and time",
                                   required=True,
@@ -417,6 +445,36 @@ class CarRentalContract(models.Model):
                                          DATE_FORMAT).date()
             if end_date == next_day:
                 next_dropoff_template.send_mail(record.id)
+
+
+    def _compute_meters_pickup_value(self):
+        if not self.odometer_pickup_id.id:
+            self.odometer_pickup_id = self.env['fleet.vehicle.odometer'].create({
+                    'vehicle_id': self.vehicle_id.id,
+                    'date': fields.Date.today(),
+                    'driver_id': self.env.user.partner_id
+                })
+            self._logger.info(f"Create the odometer {self.odometer_pickup_id.id} for pickup!!!!")
+        self.meters_pickup_value = self.odometer_pickup_id.value
+
+    def _inverse_meters_pickup_value(self):
+        self.odometer_pickup_id.date = fields.Date.today()
+        self.odometer_pickup_id.driver_id = self.env.user.partner_id
+        self.odometer_pickup_id.value = self.meters_pickup_value
+
+    def _compute_list_line_tools(self):
+        for r in self:
+            html = "<ul>"
+            for l in r.line_tools:
+                for x in l.name:
+                    html += f"<li>{x.name}</li>"
+            html += "</ul>"
+            r.list_line_tools = html
+
+    def _inverse_send_contract(self):
+        self._logger.info(f"Must send this contract to the client")
+
+
 
     def _create_recurring_invoice(self, record, invoice_date = date.today()):
 
