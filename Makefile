@@ -5,7 +5,7 @@ MODULE  := fleet_rental
 SERVER_ID = docker ps -q --filter label=com.docker.compose.project=fleet_rental_dev \
 	--filter label=com.docker.compose.service=odoo --filter label=com.docker.compose.oneoff=False
 
-.PHONY: help check-env psql-check up down logs init update shell restore restore-filestore test
+.PHONY: help check-env psql-check up down logs init update shell restore restore-filestore test test-check
 
 help:
 	@echo "check-env   verify .env and .secrets/pg_password exist"
@@ -19,6 +19,7 @@ help:
 	@echo "restore     FILE=dump.sql.gz: drop PG_DATABASE, import the dump, set owner, neutralize"
 	@echo "restore-filestore  FILE=backup-folder|manifest.txt|odoo-data.tar.gz [SOURCE_DB=name]"
 	@echo "test        run the tests on a throwaway database [TAGS=/fleet_rental:TestX] [KEEP=1]"
+	@echo "test-check  like test, but passes only if the failures are exactly the known bugs (Bug: tests)"
 
 check-env:
 	@test -f .env || { echo "missing .env: copy .env.example to .env and fill it in" >&2; exit 1; }
@@ -58,3 +59,6 @@ restore-filestore: check-env
 # Does not need .env: runs on its own throwaway Postgres.
 test:
 	@TAGS='$(TAGS)' KEEP='$(KEEP)' ./dev/run-tests
+
+test-check:
+	@TAGS='$(TAGS)' KEEP='$(KEEP)' CHECK=1 ./dev/run-tests

@@ -17,6 +17,10 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
     def setUpClass(cls):
         super().setUpClass()
         cls.share_sequence()
+        # Run crons in the contracts' company, so each test pins its own bug;
+        # the cross-company cron bug has its own test.
+        root = cls.env.ref('base.user_root')
+        root.write({'company_ids': [Command.link(cls.company.id)], 'company_id': cls.company.id})
 
     # -- helpers ------------------------------------------------------------
 
@@ -80,19 +84,26 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
             contract.action_invoice_create()
 
     def test_service_product_param_missing_falls_back(self):
-        """Bug: without fleet_rental_service_product_id (fresh install) invoicing fails.
+        """Bug: without fleet_rental_service_product_id (fresh install) invoicing crashes.
 
-        The setting is only stored once Settings are saved; the module's own
-        service product must be used meanwhile."""
-        self.env['ir.config_parameter'].sudo().search(
-            [('key', '=', 'fleet_rental_service_product_id')]).unlink()
+        The setting is only stored once Settings are saved. Correct: use the
+        module's own service product, or refuse with a clear message asking to
+        configure the service product (either is accepted)."""
+        self.restore_installed_param('fleet_rental_service_product_id')
         contract = self.running()
-        contract.action_invoice_create()
+        try:
+            contract.action_invoice_create()
+        except UserError as error:
+            self.assertIn('product', str(error).lower())
+            return
         self.assertEqual(contract.first_payment_inv.invoice_line_ids.product_id,
                          self.env.ref('fleet_rental.fleet_service_product'))
 
     def test_service_product_param_is_template(self):
-        """Bug: the setting stores a product.template id, the code searches product.product by it."""
+        """Bug: the setting stores a product.template id, the code searches product.product by it.
+
+        The product is chosen through Settings, so a fix that changes the
+        setting's model also passes."""
         attribute = self.env['product.attribute'].create({
             'name': 'Size', 'value_ids': [Command.create({'name': 'S'}), Command.create({'name': 'L'})]})
         self.env['product.template'].create({
@@ -102,7 +113,10 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
             'name': 'Other rental service', 'type': 'service', 'taxes_id': [Command.clear()],
             'property_account_income_id': self.company_data['default_account_revenue'].id})
         self.assertNotEqual(template.id, template.product_variant_id.id)
-        self.env['ir.config_parameter'].sudo().set_param('fleet_rental_service_product_id', str(template.id))
+        Settings = self.env['res.config.settings'].sudo()
+        comodel = Settings._fields['fleet_rental_service_product_id'].comodel_name
+        chosen = template if comodel == 'product.template' else template.product_variant_id
+        Settings.create({'fleet_rental_service_product_id': chosen.id}).execute()
         contract = self.running()
         contract.action_invoice_create()
         self.assertEqual(contract.first_payment_inv.invoice_line_ids.product_id.product_tmpl_id, template)
@@ -160,15 +174,30 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
     def test_recurring_cron_bills_contract(self):
         """Bug: the cron's recurring path uses the empty model instead of the contract.
 
-        Also: the cron runs in the cron user's company, so company-dependent
-        values (income account) come from the wrong company ("Incompatible
-        companies"). A missed day is caught up on the next run."""
+        Its invoice date also defaults to the day the server started
+        (`invoice_date=date.today()` in the signature), and missed days are
+        not caught up on the next run."""
         contract = self.running(cost_frequency='daily', cost_generated=100)
         with freeze_time('2026-03-03 12:00:00'):
             self.cron_model().fleet_scheduler()
         self.assertEqual(self.recurring_dates(contract), [date(2026, 3, 2), date(2026, 3, 3)])
         recurring = self.invoices(contract).filtered(lambda m: not m.is_first_invoice)
         self.assertEqual(set(recurring.invoice_line_ids.mapped('name')), {self.vehicle.name})
+
+    def test_cron_bills_contract_of_other_company(self):
+        """Bug: the cron reads company-dependent values in the cron user's company.
+
+        The cron user's company is not the contract's: the invoice must still
+        use the contract company's accounts ("Incompatible companies" today).
+        Also red until the empty-model bug above is fixed."""
+        root = self.env.ref('base.user_root')
+        root.company_id = self.env.ref('base.main_company')
+        contract = self.running(cost_frequency='daily', cost_generated=100)
+        with freeze_time('2026-03-02 12:00:00'):
+            self.cron_model().fleet_scheduler()
+        recurring = self.invoices(contract).filtered(lambda m: not m.is_first_invoice)
+        self.assertEqual(len(recurring), 1)
+        self.assertEqual(recurring.invoice_line_ids.account_id.company_ids, self.company)
 
     def test_recurring_idempotent(self):
         """Bug: running the recurring billing again the same day creates duplicates."""

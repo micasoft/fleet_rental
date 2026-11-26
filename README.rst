@@ -125,8 +125,13 @@ Ctrl-C. A full run takes a few minutes.
 - ``make test TAGS=/fleet_rental:TestPricing`` runs one test class
   (any Odoo ``--test-tags`` value).
 - ``make test KEEP=1`` keeps the test database; the next ``KEEP=1`` run
-  updates instead of reinstalling (much faster while writing tests).
-  Remove it with ``docker compose -f docker-compose.test.yml down -v``.
+  updates instead of reinstalling (much faster while writing tests). A run
+  without ``KEEP`` always starts from scratch. Remove a kept database with
+  ``docker compose -p fleet_rental_test -f docker-compose.test.yml down -v``.
+- ``make test-check`` (also takes ``TAGS``/``KEEP``) passes only when the
+  failing tests are exactly the known bugs: it lists any *unexpected
+  failure* (a regression) and any known bug that *now passes* (fixed:
+  remove its ``Bug:`` line and its row in ``tests/KNOWN_BUGS.md``).
 
 The tests describe how the addon **should** behave. Tests whose docstring
 starts with ``Bug:`` fail today on purpose: each one is a known bug, listed

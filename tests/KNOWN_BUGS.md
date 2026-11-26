@@ -1,6 +1,7 @@
 # Known bugs (pinned by failing tests)
 
-`make test` currently reports 37 failing tests out of 88. Each one asserts the
+`make test` currently reports 40 failing tests out of 91; `make test-check` passes
+when exactly these fail. Each one asserts the
 **correct** behaviour (design: `docs/superpowers/specs/2026-11-26-test-suite-design.md`)
 and carries a `Bug:` docstring. When a bug is fixed, its test turns green;
 remove its row here in the same commit. This list must shrink to zero.
@@ -30,6 +31,7 @@ Line numbers refer to the code at the time the list was written (2026-11-26).
 |---|---|---|
 | `TestLifecycle.test_scheduler_uses_local_date` | The daily cron uses the UTC date, not the company's local date. | `models/car_rental_contract.py:400` |
 | `TestLifecycle.test_next_event_uses_local_tomorrow` | The reminder cron's "tomorrow" is the UTC tomorrow. | `models/car_rental_contract.py:431` |
+| `TestLifecycle.test_scheduler_local_start_date` / `test_next_event_local_start_date` | The crons take the rental's date in UTC: a 00:30 local pickup counts as the previous day. | `models/car_rental_contract.py:394,434` |
 | `TestLifecycle.test_defaults_use_creation_date` | Date defaults are fixed when the server starts. | `models/car_rental_contract.py:93,196,228` |
 | `TestLifecycle.test_write_state_on_two_contracts` | Writing the state of several contracts at once crashes. | `models/car_rental_contract.py:346` |
 | `TestLifecycle.test_cancel_two_contracts` | Cancelling several contracts at once crashes. | `models/car_rental_contract.py:653` |
@@ -39,10 +41,11 @@ Line numbers refer to the code at the time the list was written (2026-11-26).
 | Test | Bug | Where |
 |---|---|---|
 | `TestInvoicing.test_no_income_account_raises` | `for _ in range(...)` shadows the translation function; the "define an income account" message crashes with `UnboundLocalError`. | `models/car_rental_contract.py:732` |
-| `TestInvoicing.test_service_product_param_missing_falls_back` | Without the service product setting (fresh install) invoicing fails. | `models/car_rental_contract.py:485,544,762` |
+| `TestInvoicing.test_service_product_param_missing_falls_back` | Without the service product setting (fresh install) invoicing crashes; it should use the module's service product or ask to configure one. | `models/car_rental_contract.py:485,544,762` |
 | `TestInvoicing.test_service_product_param_is_template` | The setting stores a template id; the code searches product variants by it (wrong product). | same lines |
 | `TestInvoicing.test_recurring_daily` / `_weekly` / `_monthly_end_of_month` | `action_invoice_create` crashes for recurring contracts (datetime vs date); months are 30 days. | `models/car_rental_contract.py:726` |
-| `TestInvoicing.test_recurring_cron_bills_contract` | The cron's recurring path uses the empty model (`self.vehicle_id`) instead of the contract; the cron also reads company-dependent values in the cron user's company. | `models/car_rental_contract.py:479-532` |
+| `TestInvoicing.test_recurring_cron_bills_contract` | The cron's recurring path uses the empty model (`self.vehicle_id`) instead of the contract; its invoice date defaults to the day the server started; missed days are not caught up. | `models/car_rental_contract.py:479-532` |
+| `TestInvoicing.test_cron_bills_contract_of_other_company` | The cron reads company-dependent values (income account) in the cron user's company, not the contract's ("Incompatible companies"). | `models/car_rental_contract.py:479-517`, `data/ir_cron_data.xml` |
 | `TestInvoicing.test_recurring_idempotent` | Billing again the same day creates duplicate recurring invoices. | `models/car_rental_contract.py:404-416,716` |
 | `TestInvoicing.test_recurring_reminder_mail` | The recurring reminder is sent for the empty model (`send_mail(self.id)`). | `models/car_rental_contract.py:532` |
 | `TestInvoicing.test_final_invoice_subtracts_recurring` | The final invoice does not subtract recurring invoices already issued (billed twice). | `models/car_rental_contract.py:563` |

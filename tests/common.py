@@ -47,6 +47,9 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
         cls.sales_journal = cls.company_data['default_journal_sale']
 
         params = cls.env['ir.config_parameter'].sudo()
+        # what a fresh install provides, before the fixtures override it
+        cls.installed_params = {key: params.get_param(key) for key in (
+            'fleet_rental_tolerance_delay', 'fleet_rental_service_product_id')}
         params.set_param('fleet_rental_tolerance_delay', '3')
         params.set_param('fleet_rental_service_product_id', str(cls.service_product.product_tmpl_id.id))
         for key in ('fleet_rental_calendar_sync', 'fleet_rental_send_booking',
@@ -89,6 +92,15 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
         product = cls.env['product.product'].create(vals)
         assert product.id == product.product_tmpl_id.id, (product.id, product.product_tmpl_id.id)
         return product
+
+    def restore_installed_param(self, key):
+        """Put a setting back to what a fresh install provides (absent today)."""
+        params = self.env['ir.config_parameter'].sudo()
+        value = self.installed_params[key]
+        if value is False or value is None:
+            params.search([('key', '=', key)]).unlink()
+        else:
+            params.set_param(key, value)
 
     @classmethod
     def share_sequence(cls):

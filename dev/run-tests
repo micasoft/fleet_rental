@@ -1,26 +1,72 @@
 #!/bin/bash
 # `make test [TAGS=...] [KEEP=1]`: run fleet_rental's tests on a throwaway
-# Postgres (docker-compose.test.yml). Everything is removed afterwards unless
-# KEEP=1, in which case the next run reuses the database (-u instead of -i).
+# Postgres (docker-compose.test.yml). Every run installs from scratch and
+# everything is removed afterwards, unless KEEP=1: then the database is kept
+# and the next KEEP=1 run updates it (-u) instead of reinstalling.
+#
+# CHECK=1 (`make test-check`): exit 0 only if the failing tests are exactly
+# the tests whose docstring starts with "Bug:" (the known bugs).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TC=(docker compose -f docker-compose.test.yml)
+# -p: never let COMPOSE_PROJECT_NAME (shell or .env) point this at the dev project
+TC=(docker compose -p fleet_rental_test -f docker-compose.test.yml)
 TAGS="${TAGS:-/fleet_rental}"
 KEEP="${KEEP:-}"
+CHECK="${CHECK:-}"
+log=$(mktemp "${TMPDIR:-/tmp}/fleet_rental_tests.XXXXXX")
 
-cleanup() { [ -n "$KEEP" ] || "${TC[@]}" down -v --remove-orphans >/dev/null 2>&1 || true; }
+cleanup() {
+    [ -n "$KEEP" ] || "${TC[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+    rm -f "$log"
+}
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-"${TC[@]}" up -d --wait db >/dev/null
-installed=$("${TC[@]}" exec -T db psql -U odoo -d fleet_rental_test -Atc \
-    "select 1 from ir_module_module where name='fleet_rental' and state='installed'" 2>/dev/null || true)
-mode=-i; [ "$installed" = "1" ] && mode=-u
+mode=-i
+if [ -n "$KEEP" ]; then
+    "${TC[@]}" up -d --wait db >/dev/null
+    installed=$("${TC[@]}" exec -T db psql -U odoo -d fleet_rental_test -Atc \
+        "select 1 from ir_module_module where name='fleet_rental' and state='installed'" 2>/dev/null || true)
+    [ "$installed" = "1" ] && mode=-u
+else
+    "${TC[@]}" down -v --remove-orphans >/dev/null 2>&1 || true   # a kept database from KEEP=1
+    "${TC[@]}" up -d --wait db >/dev/null
+fi
 echo ">> $([ "$mode" = -u ] && echo updating || echo installing) fleet_rental, tests: $TAGS" >&2
 
 rc=0
 "${TC[@]}" run --rm -T odoo "$mode" fleet_rental --test-enable --test-tags "$TAGS" \
-    --stop-after-init --workers 0 --max-cron-threads 0 --log-level test || rc=$?
-echo ">> tests finished, exit code $rc" >&2
-exit "$rc"
+    --stop-after-init --workers 0 --max-cron-threads 0 --log-level test 2>&1 | tee "$log" || rc=$?
+[ "$rc" -ne 0 ] || rc=${PIPESTATUS[0]}
+
+summary=$(grep -o 'odoo.tests.result: .*' "$log" | tail -1 | sed 's/odoo.tests.result: //') || true
+echo ">> ${summary:-no test result (install or import failed?)}" >&2
+[ -n "$CHECK" ] || { echo ">> exit code $rc" >&2; exit "$rc"; }
+
+# -- CHECK: compare the failing set with the Bug: tests that ran --------------
+[ -n "$summary" ] || exit 1
+python3 - "$log" tests <<'EOF'
+import ast, pathlib, re, sys
+
+log = pathlib.Path(sys.argv[1]).read_text(errors='replace')
+started = set(re.findall(r'Starting (\w+\.\w+) \.\.\.', log))
+failed = {m.split()[-1] for m in re.findall(r' (?:FAIL|ERROR): (?:Subtest )?[\w.]+', log)}
+bugs = set()
+for path in pathlib.Path(sys.argv[2]).glob('test_*.py'):
+    for cls in ast.parse(path.read_text()).body:
+        if isinstance(cls, ast.ClassDef):
+            for fn in cls.body:
+                if isinstance(fn, ast.FunctionDef) and fn.name.startswith('test_') \
+                        and (ast.get_docstring(fn) or '').startswith('Bug:'):
+                    bugs.add(f'{cls.name}.{fn.name}')
+expected = bugs & started
+unexpected = sorted(failed - expected)
+fixed = sorted(expected - failed)
+print(f'>> known bugs: {len(expected)} expected to fail, {len(expected & failed)} did')
+for name in unexpected:
+    print(f'   UNEXPECTED FAILURE (regression or new bug): {name}')
+for name in fixed:
+    print(f'   NOW PASSING (bug fixed? drop its Bug: line and KNOWN_BUGS.md row): {name}')
+sys.exit(1 if unexpected or fixed else 0)
+EOF

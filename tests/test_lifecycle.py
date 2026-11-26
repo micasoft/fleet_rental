@@ -84,6 +84,17 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
             self.cron_model().fleet_scheduler()
         self.assertEqual(contract.state, 'running')
 
+    def test_scheduler_local_start_date(self):
+        """Bug: the cron takes the rental's date in UTC, not local time.
+
+        A pickup at 00:30 local on 15 July is 23:30 UTC on 14 July; at noon on
+        14 July it has not started yet."""
+        contract = self.reserved(rent_start_date='2026-07-14 23:30:00',
+                                 rent_end_date='2026-07-18 08:00:00')
+        with freeze_time('2026-07-14 12:00:00'):
+            self.cron_model().fleet_scheduler()
+        self.assertEqual(contract.state, 'reserved')
+
     # -- next_event -----------------------------------------------------------
 
     def test_next_event_pickup_tomorrow(self):
@@ -110,6 +121,17 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         contract = self.reserved(rent_start_date='2026-07-16 08:00:00',
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 23:15:00'), self.mock_mail_gateway():
+            self.cron_model().next_event()
+        self.assertEqual(len(self.mails_with_subject('Next events for %s!' % contract.name)), 1)
+
+    def test_next_event_local_start_date(self):
+        """Bug: the reminder cron takes the rental's date in UTC, not local time.
+
+        On 14 July a pickup at 00:30 local on 15 July (23:30 UTC on 14 July)
+        is tomorrow."""
+        contract = self.reserved(rent_start_date='2026-07-14 23:30:00',
+                                 rent_end_date='2026-07-18 08:00:00')
+        with freeze_time('2026-07-14 12:00:00'), self.mock_mail_gateway():
             self.cron_model().next_event()
         self.assertEqual(len(self.mails_with_subject('Next events for %s!' % contract.name)), 1)
 

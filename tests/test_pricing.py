@@ -48,9 +48,10 @@ class TestPricing(FleetRentalCommon):
         """Bug: missing fleet_rental_tolerance_delay counts 0 hours, not 3.
 
         The parameter only exists once Settings are saved; on a fresh install
-        int(False) gives no tolerance at all instead of the default 3 hours."""
-        self.env['ir.config_parameter'].sudo().search(
-            [('key', '=', 'fleet_rental_tolerance_delay')]).unlink()
+        int(False) gives no tolerance at all instead of the default 3 hours.
+        The test restores the install-time state, so shipping the default as
+        data also fixes it."""
+        self.restore_installed_param('fleet_rental_tolerance_delay')
         form = self.contract_form('2026-03-02 10:00', '2026-03-03 12:00')
         self.assertEqual(form.contract_days, 1)
 
