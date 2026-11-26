@@ -28,11 +28,6 @@ class TestReservation(FleetRentalCommon, MockEmail):
         self.assertEqual(reservation.date_from, contract.rent_start_date)
         self.assertEqual(reservation.date_to, contract.rent_end_date)
 
-    def share_sequence(self):
-        """Isolate other tests from the multi-company sequence bug below."""
-        self.env['ir.sequence'].sudo().search(
-            [('code', '=', 'car.rental.sequence')]).company_id = False
-
     def test_confirm_assigns_number(self):
         """Bug: the contract sequence belongs to the company active at install.
 

@@ -63,6 +63,16 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
         cls.user_normal = user('rental_normal', 'fleet_rental.fleet_car_rental_group_user')
         cls.user_manager = user('rental_manager', 'fleet_rental.fleet_car_rental_group_manager')
 
+    @classmethod
+    def share_sequence(cls):
+        """Make the contract sequence usable by the test company.
+
+        Works around the multi-company sequence bug (pinned by
+        TestReservation.test_confirm_assigns_number) so other tests get
+        contract numbers."""
+        cls.env['ir.sequence'].sudo().search(
+            [('code', '=', 'car.rental.sequence')]).company_id = False
+
     def make_contract(self, **vals):
         values = {
             'customer_id': self.customer.id,
