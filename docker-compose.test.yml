@@ -1,0 +1,40 @@
+# Throwaway stack for `make test`: its own Postgres in RAM, never the LAN
+# server, never .env. Removed after every run (see dev/run-tests).
+name: fleet_rental_test
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: fleet_rental_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "odoo", "-d", "fleet_rental_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  odoo:
+    image: odoo:18
+    user: root
+    entrypoint: ["/dev-entrypoint.sh"]
+    environment:
+      PG_HOST: db
+      PG_PORT: "5432"
+      PG_USER: odoo
+      PG_DATABASE: fleet_rental_test
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets: [pg_password]
+    volumes:
+      - .:/mnt/extra-addons/fleet_rental:ro
+      - ./dev/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./dev/entrypoint.sh:/dev-entrypoint.sh:ro
+      - odoo_test_data:/var/lib/odoo
+secrets:
+  # throwaway password of the throwaway db container above (private network, no ports)
+  pg_password: {file: ./dev/test/pg_password}
+volumes:
+  odoo_test_data:

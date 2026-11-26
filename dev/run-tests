@@ -1,0 +1,26 @@
+#!/bin/bash
+# `make test [TAGS=...] [KEEP=1]`: run fleet_rental's tests on a throwaway
+# Postgres (docker-compose.test.yml). Everything is removed afterwards unless
+# KEEP=1, in which case the next run reuses the database (-u instead of -i).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+TC=(docker compose -f docker-compose.test.yml)
+TAGS="${TAGS:-/fleet_rental}"
+KEEP="${KEEP:-}"
+
+cleanup() { [ -n "$KEEP" ] || "${TC[@]}" down -v --remove-orphans >/dev/null 2>&1 || true; }
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+"${TC[@]}" up -d --wait db >/dev/null
+installed=$("${TC[@]}" exec -T db psql -U odoo -d fleet_rental_test -Atc \
+    "select 1 from ir_module_module where name='fleet_rental' and state='installed'" 2>/dev/null || true)
+mode=-i; [ "$installed" = "1" ] && mode=-u
+echo ">> $([ "$mode" = -u ] && echo updating || echo installing) fleet_rental, tests: $TAGS" >&2
+
+rc=0
+"${TC[@]}" run --rm -T odoo "$mode" fleet_rental --test-enable --test-tags "$TAGS" \
+    --stop-after-init --workers 0 --max-cron-threads 0 --log-level test || rc=$?
+echo ">> tests finished, exit code $rc" >&2
+exit "$rc"

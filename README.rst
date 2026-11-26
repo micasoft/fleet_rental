@@ -60,6 +60,7 @@ Commands
 ``make shell``                Odoo shell on the database
 ``make restore``              ``FILE=dump.sql.gz``: replace ``PG_DATABASE`` with the dump
 ``make restore-filestore``    ``FILE=folder|manifest.txt|tar.gz``: replace the dev filestore
+``make test``                 run the tests on a throwaway database (see below)
 ============================  ================================================================
 
 Restoring a backup
@@ -112,6 +113,24 @@ The repo is mounted read-only at ``/mnt/extra-addons/fleet_rental``.
 Odoo runs with ``--dev=reload,xml``: Python changes restart the server
 automatically and XML views reload on browser refresh. New fields, data
 files and security changes still need ``make update``.
+
+Running the tests
+-----------------
+``make test`` installs ``fleet_rental`` into a throwaway PostgreSQL that
+lives in RAM only for the run (``docker-compose.test.yml``) and runs the
+addon's tests (``tests/``). It never uses ``.env``, the LAN server or your
+database, and it removes its containers afterwards, also on failure or
+Ctrl-C. A full run takes a few minutes.
+
+- ``make test TAGS=/fleet_rental:TestPricing`` runs one test class
+  (any Odoo ``--test-tags`` value).
+- ``make test KEEP=1`` keeps the test database; the next ``KEEP=1`` run
+  updates instead of reinstalling (much faster while writing tests).
+  Remove it with ``docker compose -f docker-compose.test.yml down -v``.
+
+The tests describe how the addon **should** behave. Tests whose docstring
+starts with ``Bug:`` fail today on purpose: each one is a known bug, listed
+in ``tests/KNOWN_BUGS.md``. Fixing the bug turns the test green.
 
 Options (``.env``)
 ------------------
