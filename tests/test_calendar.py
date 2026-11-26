@@ -12,7 +12,6 @@ class TestCalendar(FleetRentalCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.share_sequence()
         cls.env['ir.config_parameter'].sudo().set_param('fleet_rental_calendar_sync', True)
         cls.pickup_partner = cls.user_limited.partner_id
         cls.dropoff_partner = cls.user_normal.partner_id
@@ -37,7 +36,7 @@ class TestCalendar(FleetRentalCommon):
         self.assertFalse(contract.calendar_start_date_id | contract.calendar_end_date_id)
 
     def test_dropoff_event_location(self):
-        """Bug: the drop-off event uses the pick-up location."""
+        """The drop-off event is at the drop-off location."""
         contract = self.reserved()
         self.assertEqual(contract.calendar_end_date_id.location, 'Lisboa')
 

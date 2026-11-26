@@ -25,7 +25,7 @@ class CarRentalFleetVehicle(models.Model):
     """Inherit fleet.vehicle"""
     _inherit = 'fleet.vehicle'
 
-    company_currency_id = fields.Many2one(related='company_id.currency_id')
+    company_currency_id = fields.Many2one(related='company_id.currency_id', string='Company Currency')
 
     owner = fields.Many2one('res.partner',
                             required=True,

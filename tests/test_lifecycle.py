@@ -15,7 +15,6 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.share_sequence()
         cls.state_rent = cls.env.ref('fleet_rental.vehicle_state_rent')
         cls.state_active = cls.env.ref('fleet_rental.vehicle_state_active')
 
@@ -74,10 +73,8 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         self.assertEqual(contract.state, 'done')
 
     def test_scheduler_uses_local_date(self):
-        """Bug: the cron uses the UTC date, not the company's local date.
-
-        23:15 UTC on 14 July is 00:15 on 15 July in Lisbon: a rental starting
-        at 09:00 local on 15 July starts today."""
+        """The cron uses the local date: 23:15 UTC on 14 July is 00:15 on 15 July
+        in Lisbon, so a rental starting at 09:00 local on 15 July starts today."""
         contract = self.reserved(rent_start_date='2026-07-15 08:00:00',
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 23:15:00'):
@@ -85,10 +82,8 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         self.assertEqual(contract.state, 'running')
 
     def test_scheduler_local_start_date(self):
-        """Bug: the cron takes the rental's date in UTC, not local time.
-
-        A pickup at 00:30 local on 15 July is 23:30 UTC on 14 July; at noon on
-        14 July it has not started yet."""
+        """A pickup at 00:30 local on 15 July (23:30 UTC on 14 July) has not
+        started at noon on 14 July."""
         contract = self.reserved(rent_start_date='2026-07-14 23:30:00',
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 12:00:00'):
@@ -115,9 +110,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         self.assertIn(contract.handle_dropoff, mails.recipient_ids)
 
     def test_next_event_uses_local_tomorrow(self):
-        """Bug: the cron uses the UTC date, not the company's local date.
-
-        At 00:15 local on 15 July, a pickup on 16 July is tomorrow."""
+        """At 00:15 local on 15 July, a pickup on 16 July is tomorrow."""
         contract = self.reserved(rent_start_date='2026-07-16 08:00:00',
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 23:15:00'), self.mock_mail_gateway():
@@ -125,10 +118,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         self.assertEqual(len(self.mails_with_subject('Next events for %s!' % contract.name)), 1)
 
     def test_next_event_local_start_date(self):
-        """Bug: the reminder cron takes the rental's date in UTC, not local time.
-
-        On 14 July a pickup at 00:30 local on 15 July (23:30 UTC on 14 July)
-        is tomorrow."""
+        """On 14 July a pickup at 00:30 local on 15 July (23:30 UTC on 14 July) is tomorrow."""
         contract = self.reserved(rent_start_date='2026-07-14 23:30:00',
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 12:00:00'), self.mock_mail_gateway():
@@ -144,7 +134,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
     # -- defaults and several records ----------------------------------------
 
     def test_defaults_use_creation_date(self):
-        """Bug: date defaults are fixed when the server starts (default=str(date.today()))."""
+        """Date defaults are the date the record is created."""
         names = ['rent_start_date', 'rent_pickup_date', 'rent_dropoff_date']
         with freeze_time('2030-01-15 10:00:00'):
             defaults = self.env['car.rental.contract'].default_get(names)
@@ -153,14 +143,14 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
                 self.assertEqual(fields.Datetime.to_datetime(defaults[name]).date(), date(2030, 1, 15))
 
     def test_write_state_on_two_contracts(self):
-        """Bug: the state constraint assumes one record (fails on several)."""
+        """Writing the state of several contracts at once works."""
         c1 = self.reserved()
         c2 = self.reserved(vehicle_id=self.vehicle2.id)
         (c1 | c2).write({'state': 'running'})
         self.assertEqual((self.vehicle | self.vehicle2).state_id, self.state_rent)
 
     def test_cancel_two_contracts(self):
-        """Bug: action_cancel assumes one record (fails on several)."""
+        """Cancelling several contracts at once works."""
         c1 = self.reserved()
         c2 = self.reserved(vehicle_id=self.vehicle2.id)
         (c1 | c2).action_cancel()

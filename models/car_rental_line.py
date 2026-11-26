@@ -45,17 +45,6 @@ class CarRentalLine(models.Model):
                            related='invoice_ref.invoice_date_due')
 
     def paid_info(self):
-        """
-            Retrieve payment information for the current record.
-            Check the state of the associated invoice based on the provided
-            invoice number.
-            If the record exists, set the payment_info field to the state of
-            the invoice.
-            Otherwise, set the payment_info field to 'Record Deleted'.
-        """
-        for each in self:
-            if self.env['account.move'].browse(each.invoice_number):
-                each.payment_info = self.env['account.move'].browse(
-                    each.invoice_number).state
-            else:
-                each.payment_info = 'Record Deleted'
+        """State of the recurring invoice, or 'Record Deleted' if it is gone."""
+        for line in self:
+            line.payment_info = line.invoice_ref.state or 'Record Deleted'

@@ -18,10 +18,13 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from odoo import models, fields, tools
+from odoo import fields, models, tools
+
+from ..models.car_rental_contract import COST_FREQUENCIES, STATES
 
 
 class FleetRentalReport(models.Model):
+    """Rental analysis: one row per (not deleted) contract."""
     _name = "report.fleet.rental"
     _description = "Fleet Rental Analysis"
     _order = 'name desc'
@@ -33,71 +36,28 @@ class FleetRentalReport(models.Model):
     rent_cost = fields.Float(string="Rent Cost")
     rent_start_date = fields.Date(string="Rent Start Date")
     rent_end_date = fields.Date(string="Rent End Date")
-    state = fields.Selection(
-        [('draft', 'Draft'), ('running', 'Running'), ('cancel', 'Cancel'),
-         ('checking', 'Checking'), ('done', 'Done')], string="State")
-    cost_frequency = fields.Selection(
-        [('no', 'No'), ('once', 'Full contract'), ('daily', 'Daily'), ('weekly', 'Weekly'),
-         ('monthly', 'Monthly')], string="Recurring Cost Frequency")
+    state = fields.Selection(STATES, string="State")
+    cost_frequency = fields.Selection(COST_FREQUENCIES, string="Recurring Cost Frequency")
     total = fields.Float(string="Total(Tools)")
     damage_cost = fields.Float(string="Damage cost")
     total_cost = fields.Float(string="Total cost")
 
-
-    def _select(self):
-        """
-            Construct a SQL select query string with specific fields.
-        """
-        select_str = """
-             SELECT
-                    (select 1 ) AS nbr,
-                    t.id as id,
-                    t.name as name,
-                    t.customer_id as customer_id,
-                    t.vehicle_id as vehicle_id,
-                    t.rent_cost as cost,
-                    t.rent_start_date as rent_start_date,
-                    t.rent_end_date as rent_end_date,
-                    t.state as state,
-                    t.cost_frequency as cost_frequency,
-                    t.tools_cost as tools_cost,
-                    t.damage_cost as damage_cost,
-                    t.total_cost as total_cost
-        """
-        return select_str
-
-    def _group_by(self):
-        """
-            Construct a SQL GROUP BY query string with specific fields.
-        """
-        group_by_str = """
-                GROUP BY
-                    t.id,
-                    name,
-                    customer_id,
-                    vehicle_id,
-                    rent_cost,
-                    rent_start_date,
-                    rent_end_date,
-                    state,
-                    cost_frequency,
-                    tools_cost,
-                    damage_cost,
-                    total_cost
-        """
-        return group_by_str
-
     def init(self):
-        """
-            Initialize the module and create a database view for reporting
-            fleet rentals.
-            Drop the existing 'report_fleet_rental' view if it already exists.
-            Create a new view with the SQL select and group by queries.
-        """
-        tools.sql.drop_view_if_exists(self._cr, 'report_fleet_rental')
-        self._cr.execute("""
-            CREATE view report_fleet_rental as
-              %s
+        tools.sql.drop_view_if_exists(self.env.cr, self._table)
+        self.env.cr.execute("""
+            CREATE VIEW report_fleet_rental AS
+            SELECT t.id,
+                   t.name,
+                   t.customer_id,
+                   t.vehicle_id,
+                   t.rent_cost,
+                   t.rent_start_date,
+                   t.rent_end_date,
+                   t.state,
+                   t.cost_frequency,
+                   t.tools_cost AS total,
+                   t.damage_cost,
+                   t.total_cost
               FROM car_rental_contract t
-                %s
-        """ % (self._select(), self._group_by()))
+             WHERE NOT COALESCE(t.soft_deleted, FALSE)
+        """)

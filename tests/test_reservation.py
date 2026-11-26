@@ -29,9 +29,7 @@ class TestReservation(FleetRentalCommon, MockEmail):
         self.assertEqual(reservation.date_to, contract.rent_end_date)
 
     def test_confirm_assigns_number(self):
-        """Bug: the contract sequence belongs to the company active at install.
-
-        Contracts of any other company get no number (name False)."""
+        """Confirmed contracts of any company get a number from the shared sequence."""
         contract = self.confirm(self.make_contract())
         self.assertRegex(contract.name or '', r'^RENT/%d/\d{4}$' % contract.create_date.year)
 
@@ -49,17 +47,14 @@ class TestReservation(FleetRentalCommon, MockEmail):
         self.assertEqual(other.state, 'reserved')
 
     def test_same_time_handover_allowed(self):
-        """Bug: same-time handover is refused (the overlap check includes both ends).
-
-        Returned at 10:00, next customer picks up at 10:00: no overlap."""
+        """Returned at 10:00, next customer picks up at 10:00: no overlap."""
         self.confirm(self.make_contract())
         other = self.confirm(self.make_contract(rent_start_date='2026-03-05 10:00:00',
                                                 rent_end_date='2026-03-07 10:00:00'))
         self.assertEqual(other.state, 'reserved')
 
     def test_number_kept_after_back_to_quote(self):
-        """Bug: a new sequence number is drawn each time the contract is confirmed."""
-        self.share_sequence()
+        """Back to Quote and confirmed again keeps the contract number."""
         contract = self.confirm(self.make_contract())
         number = contract.name
         self.assertTrue(number)
@@ -133,7 +128,7 @@ class TestReservation(FleetRentalCommon, MockEmail):
         self.assertFalse(contract.read_only)
 
     def test_extend_into_other_reservation_refused(self):
-        """Bug: extending ignores other reservations of the same vehicle."""
+        """Extending into another reservation of the vehicle is refused."""
         contract = self.confirm(self.make_contract())
         self.confirm(self.make_contract(rent_start_date='2026-03-06 10:00:00',
                                         rent_end_date='2026-03-08 10:00:00'))
@@ -141,9 +136,7 @@ class TestReservation(FleetRentalCommon, MockEmail):
             self.extend(contract, datetime(2026, 3, 7, 10, 0))
 
     def test_extend_reprices_rent(self):
-        """Bug: extending never re-prices the rent, so extra days are not billed.
-
-        3 days at 50 = 150; extended to 5 days the 4-10 range applies: 5 x 40."""
+        """Extending re-prices the rent: 3 days at 50 = 150; extended to 5 days the 4-10 range applies: 5 x 40."""
         contract = self.confirm(self.make_contract())
         self.extend(contract, datetime(2026, 3, 7, 10, 0))
         self.assertEqual(contract.rent_cost, 200)

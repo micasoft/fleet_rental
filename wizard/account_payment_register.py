@@ -18,32 +18,16 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from odoo import models, _
+from odoo import models
 
 
 class AccountPaymentRegister(models.TransientModel):
-    """ Inherit account.payment.register supering action_create_payments
-        Sending mail for the first created invoice
-    """
+    """Mail the customer when the first payment of a rental is registered."""
     _inherit = 'account.payment.register'
 
     def action_create_payments(self):
-        res = super().action_create_payments()
-        invoice_id = self.env['account.move'].search([('name', '=', self.communication)])
-        if invoice_id.is_first_invoice:
-            mail_content = _(
-                '<h3>First Payment Received!</h3><br/>Hi %s, <br/> This is to notify that your first payment has '
-                'been received. <br/><br/>'
-                'Please find the details below:<br/><br/>'
-                '<table><tr><td>Invoice Number<td/><td> %s<td/><tr/>'
-                '<tr><td>Date<td/><td> %s <td/><tr/><tr><td>Amount <td/><td> %s<td/><tr/><table/>') % (
-                               invoice_id.partner_id.name, invoice_id.payment_reference,
-                               invoice_id.invoice_date, invoice_id.amount_total)
-            main_content = {
-                'subject': _('Payment Received: %s') % invoice_id.payment_reference,
-                'author_id': self.env.user.partner_id.id,
-                'body_html': mail_content,
-                'email_to': invoice_id.partner_id.email,
-            }
-            self.env['mail.mail'].create(main_content).send()
-        return res
+        result = super().action_create_payments()
+        for invoice in self.line_ids.move_id.filtered('is_first_invoice'):
+            invoice._send_first_payment_mail()
+        return result
+

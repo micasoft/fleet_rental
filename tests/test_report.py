@@ -8,7 +8,7 @@ from .common import FleetRentalCommon
 class TestReport(FleetRentalCommon):
 
     def test_report_reads_all_fields(self):
-        """Bug: the report's SQL view uses wrong column names (cost, tools_cost)."""
+        """The analysis report shows rent, tools, damage and total."""
         contract = self.make_contract(damage_cost=30)
         contract.line_tools = [Command.create({'name': self.tool_once.id, 'quantity': 1, 'price': 25})]
         self.env.flush_all()
@@ -19,13 +19,13 @@ class TestReport(FleetRentalCommon):
             (150, 25, 30, contract.total_cost))
 
     def test_report_states_match_contract(self):
-        """Bug: the report's state list lacks 'reserved' and 'invoice'."""
+        """The report offers every contract state."""
         def keys(model):
             return {key for key, _label in self.env[model]._fields['state'].selection}
         self.assertEqual(keys('report.fleet.rental'), keys('car.rental.contract'))
 
     def test_every_model_has_access_rules(self):
-        """Bug: report.fleet.rental has no access rules (only superuser can read it)."""
+        """Every model of the module has access rules."""
         names = self.env['ir.model.data'].search(
             [('module', '=', 'fleet_rental'), ('model', '=', 'ir.model')]).mapped('res_id')
         missing = [

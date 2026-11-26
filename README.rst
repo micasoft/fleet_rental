@@ -133,9 +133,9 @@ Ctrl-C. A full run takes a few minutes.
   failure* (a regression) and any known bug that *now passes* (fixed:
   remove its ``Bug:`` line and its row in ``tests/KNOWN_BUGS.md``).
 
-The tests describe how the addon **should** behave. Tests whose docstring
-starts with ``Bug:`` fail today on purpose: each one is a known bug, listed
-in ``tests/KNOWN_BUGS.md``. Fixing the bug turns the test green.
+The tests describe how the addon **should** behave, and all of them pass.
+A test whose docstring starts with ``Bug:`` pins a known bug: it fails on
+purpose until the bug is fixed, and is listed in ``tests/KNOWN_BUGS.md``.
 
 Options (``.env``)
 ------------------

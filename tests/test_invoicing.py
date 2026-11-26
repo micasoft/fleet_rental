@@ -13,15 +13,6 @@ from .common import FleetRentalCommon
 @tagged('post_install', '-at_install', 'fleet_rental')
 class TestInvoicing(FleetRentalCommon, MockEmail):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.share_sequence()
-        # Run crons in the contracts' company, so each test pins its own bug;
-        # the cross-company cron bug has its own test.
-        root = cls.env.ref('base.user_root')
-        root.write({'company_ids': [Command.link(cls.company.id)], 'company_id': cls.company.id})
-
     # -- helpers ------------------------------------------------------------
 
     def cron_model(self):
@@ -68,15 +59,8 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
 
     # -- service product ------------------------------------------------------
 
-    def test_service_product_ids_align(self):
-        """Precondition for the other tests: in a fresh database the fixture
-        product's template and variant ids are equal, so the template-vs-variant
-        bug below does not mask other results."""
-        self.assertEqual(self.service_product.id, self.service_product.product_tmpl_id.id)
-
     def test_no_income_account_raises(self):
-        """Bug: `for _ in range(...)` in action_invoice_create shadows the translation
-        function, so this message crashes with UnboundLocalError instead of showing."""
+        """A service product without income account is refused with a message naming it."""
         self.service_product.property_account_income_id = False
         self.service_product.categ_id.property_account_income_categ_id = False
         contract = self.running()
@@ -84,11 +68,8 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
             contract.action_invoice_create()
 
     def test_service_product_param_missing_falls_back(self):
-        """Bug: without fleet_rental_service_product_id (fresh install) invoicing crashes.
-
-        The setting is only stored once Settings are saved. Correct: use the
-        module's own service product, or refuse with a clear message asking to
-        configure the service product (either is accepted)."""
+        """Without the service product setting (fresh install) invoicing uses the
+        module's own service product, or refuses with a clear message (either is accepted)."""
         self.restore_installed_param('fleet_rental_service_product_id')
         contract = self.running()
         try:
@@ -100,10 +81,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
                          self.env.ref('fleet_rental.fleet_service_product'))
 
     def test_service_product_param_is_template(self):
-        """Bug: the setting stores a product.template id, the code searches product.product by it.
-
-        The product is chosen through Settings, so a fix that changes the
-        setting's model also passes."""
+        """Invoices use the product chosen in Settings (the setting stores a template)."""
         attribute = self.env['product.attribute'].create({
             'name': 'Size', 'value_ids': [Command.create({'name': 'S'}), Command.create({'name': 'L'})]})
         self.env['product.template'].create({
@@ -138,7 +116,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
     # -- recurring invoices ---------------------------------------------------
 
     def test_recurring_daily(self):
-        """Bug: action_invoice_create crashes for recurring frequencies (datetime vs date)."""
+        """Daily: one invoice per day from the start date to the end date."""
         contract = self.running(cost_frequency='daily', cost_generated=100)
         with freeze_time('2026-03-05 12:00:00'):
             contract.action_invoice_create()
@@ -151,7 +129,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(len(contract.recurring_line), 4)
 
     def test_recurring_weekly(self):
-        """Bug: action_invoice_create crashes for recurring frequencies (datetime vs date)."""
+        """Weekly: one invoice every 7 days from the start date."""
         contract = self.running(cost_frequency='weekly', cost_generated=100,
                                 rent_end_date='2026-03-20 10:00:00')
         with freeze_time('2026-03-20 12:00:00'):
@@ -160,9 +138,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
                          [date(2026, 3, 2), date(2026, 3, 9), date(2026, 3, 16)])
 
     def test_recurring_monthly_end_of_month(self):
-        """Bug: action_invoice_create crashes for recurring frequencies; months are 30 days.
-
-        Monthly = same day of each calendar month, last day of shorter months."""
+        """Monthly = same day of each calendar month, last day of shorter months."""
         contract = self.running(cost_frequency='monthly', cost_generated=100,
                                 rent_start_date='2026-01-31 10:00:00',
                                 rent_end_date='2026-04-15 10:00:00')
@@ -172,11 +148,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
                          [date(2026, 1, 31), date(2026, 2, 28), date(2026, 3, 31)])
 
     def test_recurring_cron_bills_contract(self):
-        """Bug: the cron's recurring path uses the empty model instead of the contract.
-
-        Its invoice date also defaults to the day the server started
-        (`invoice_date=date.today()` in the signature), and missed days are
-        not caught up on the next run."""
+        """The cron bills each recurring period on its own date and catches up missed days."""
         contract = self.running(cost_frequency='daily', cost_generated=100)
         with freeze_time('2026-03-03 12:00:00'):
             self.cron_model().fleet_scheduler()
@@ -185,13 +157,8 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(set(recurring.invoice_line_ids.mapped('name')), {self.vehicle.name})
 
     def test_cron_bills_contract_of_other_company(self):
-        """Bug: the cron reads company-dependent values in the cron user's company.
-
-        The cron user's company is not the contract's: the invoice must still
-        use the contract company's accounts ("Incompatible companies" today).
-        Also red until the empty-model bug above is fixed."""
-        root = self.env.ref('base.user_root')
-        root.company_id = self.env.ref('base.main_company')
+        """The cron bills a contract with its own company's accounts, whatever the cron user's company."""
+        self.assertNotEqual(self.env.ref('base.user_root').company_id, self.company)
         contract = self.running(cost_frequency='daily', cost_generated=100)
         with freeze_time('2026-03-02 12:00:00'):
             self.cron_model().fleet_scheduler()
@@ -200,7 +167,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(recurring.invoice_line_ids.account_id.company_ids, self.company)
 
     def test_recurring_idempotent(self):
-        """Bug: running the recurring billing again the same day creates duplicates."""
+        """Billing again the same day creates no duplicate."""
         contract = self.running(cost_frequency='daily', cost_generated=100)
         with freeze_time('2026-03-03 12:00:00'):
             contract.action_invoice_create()
@@ -209,7 +176,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(self.recurring_dates(contract), [date(2026, 3, 2), date(2026, 3, 3)])
 
     def test_recurring_reminder_mail(self):
-        """Bug: the recurring reminder is sent for the empty model (send_mail(self.id))."""
+        """The recurring reminder is sent for the contract."""
         self.env['ir.config_parameter'].sudo().set_param('fleet_rental_send_recurring_reminder', True)
         contract = self.running(cost_frequency='daily', cost_generated=100)
         with freeze_time('2026-03-02 12:00:00'), self.mock_mail_gateway():
@@ -236,9 +203,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(invoice.invoice_line_ids.mapped('price_unit'), [100])
 
     def test_final_invoice_subtracts_recurring(self):
-        """Bug: the final invoice ignores recurring invoices already issued (billed twice).
-
-        300 rent - 50 first payment - 2 x 100 recurring + 20 tools + 30 damage = 100."""
+        """Final invoice: 300 rent - 50 first payment - 2 x 100 recurring + 20 tools + 30 damage = 100."""
         contract = self.running(rent_cost=300, cost_frequency='weekly', cost_generated=100)
         self.issue_recurring(contract, 100, date(2026, 3, 2))
         self.issue_recurring(contract, 100, date(2026, 3, 9))
@@ -248,7 +213,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(invoice.amount_untaxed, 100)
 
     def test_default_journal_is_sales(self):
-        """Bug: the default journal is the journal with id 1, of any type and company."""
+        """The default journal is the company's sales journal."""
         company2 = self.setup_other_company()['company']
         Contract = self.env['car.rental.contract'].with_company(company2)
         journal = self.env['account.journal'].browse(Contract.default_get(['journal_type']).get('journal_type'))
@@ -279,7 +244,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(contract.state, 'checking')
 
     def test_cancel_recurring_invoice_keeps_state(self):
-        """Bug: cancelling any rental invoice moves a non-running contract to checking."""
+        """Cancelling a recurring invoice does not change the contract."""
         contract = self.running(cost_frequency='daily', cost_generated=100)
         recurring = self.issue_recurring(contract, 100, date(2026, 3, 2))
         self.verify(contract)
@@ -287,7 +252,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(contract.state, 'invoice')
 
     def test_cancel_invoice_of_done_contract(self):
-        """Bug: cancelling an invoice of a done contract moves it back to checking."""
+        """A done contract stays done when one of its invoices is cancelled."""
         contract = self.running()
         contract.action_invoice_create()
         contract.state = 'done'
@@ -295,7 +260,7 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(contract.state, 'done')
 
     def test_cancel_two_invoices(self):
-        """Bug: button_cancel assumes one invoice (fails on several contracts)."""
+        """Cancelling invoices of several contracts at once works."""
         c1 = self.running()
         c2 = self.running(vehicle_id=self.vehicle2.id)
         inv1 = self.issue_recurring(c1, 100, date(2026, 3, 2))
@@ -328,6 +293,6 @@ class TestInvoicing(FleetRentalCommon, MockEmail):
         self.assertEqual(mails.email_to, self.customer.email)
 
     def test_first_payment_mail_custom_memo(self):
-        """Bug: the paid invoice is looked up by name = payment memo; a custom memo sends nothing."""
+        """The first payment mail is sent whatever the payment memo."""
         self.pay_first_invoice(communication='XYZ')
         self.assertEqual(len(self.payment_mails()), 1)

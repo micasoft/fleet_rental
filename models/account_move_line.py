@@ -22,15 +22,11 @@ from odoo import api, models
 
 
 class AccountMoveLine(models.Model):
-    """Inherit account.move.line"""
     _inherit = 'account.move.line'
 
     @api.onchange('price_unit')
     def _onchange_price_unit(self):
-        """
-            Update the 'first_payment' field of the associated
-            'car.rental.contract' model when the 'price_unit' field changes.
-        """
-        fleet_model = self.move_id.fleet_rent_id
-        if fleet_model:
-            fleet_model.first_payment = self.price_unit
+        """Editing the amount of a first-payment invoice updates the
+        contract's first payment."""
+        if self.move_id.is_first_invoice and self.move_id.fleet_rent_id:
+            self.move_id.fleet_rent_id.first_payment = self.price_unit

@@ -19,1001 +19,789 @@
 #
 #############################################################################
 import base64
+import hashlib
+import json
 import logging
+from datetime import timedelta
 
-from datetime import datetime, date, timedelta
-from odoo import api, fields, models, _
+import pytz
+from dateutil.relativedelta import relativedelta
+from markupsafe import Markup
+
+from odoo import SUPERUSER_ID, Command, api, fields, models, _
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools import format_datetime
-from odoo.exceptions import UserError, ValidationError
 
 from .res_config_settings import DEFAULT_TOLERANCE_DELAY
 
-DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+_logger = logging.getLogger(__name__)
+
+QUOTE_NAME = "Quote Contract"  # name of a contract until it gets its number
+
+STATES = [
+    ('draft', 'Quote'),
+    ('reserved', 'Reserved'),
+    ('running', 'Running'),
+    ('cancel', 'Cancel'),
+    ('checking', 'Checking'),
+    ('invoice', 'Invoice'),
+    ('done', 'Done'),
+]
+
+COST_FREQUENCIES = [
+    ('no', 'No'),
+    ('daily', 'Daily'),
+    ('weekly', 'Weekly'),
+    ('monthly', 'Monthly'),
+]
+
+BILLING_STEP = {
+    'daily': relativedelta(days=1),
+    'weekly': relativedelta(weeks=1),
+    'monthly': relativedelta(months=1),  # 31 Jan -> 28/29 Feb -> 31 Mar
+}
+
+GROUP_PICKUP = 'fleet_rental.fleet_car_rental_group_limited'
+GROUP_USER = 'fleet_rental.fleet_car_rental_group_user'
+
+# The only fields a Pickup/Dropoff user may change.
+PICKUP_FIELDS = {
+    'rent_pickup_date', 'rent_dropoff_date',
+    'fuel_tunk_pickup', 'fuel_tunk_dropoff',
+    'meters_pickup_value', 'odometer_pickup_id',
+    'attachment_pickup_ids', 'signature_pickup', 'send_contract',
+    'notes',
+}
+
+# Changing any of these fields changes the totals, so the quote must be re-sent.
+PRICE_FIELDS = {'rent_cost', 'line_tools', 'damage_cost'}
+
+# Changing any of these fields may change the contract's calendar events.
+CALENDAR_FIELDS = {
+    'state', 'vehicle_id', 'customer_id', 'driver_id', 'sales_person',
+    'handle_pickup', 'handle_dropoff', 'pickup_location', 'dropoff_location',
+    'rent_start_date', 'rent_end_date', 'notes',
+}
+
 
 class CarRentalContract(models.Model):
-    _logger = logging.getLogger(__name__)
-
     _name = 'car.rental.contract'
     _inherit = ['mail.thread']
     _description = 'Fleet Rental Contract'
 
-    image = fields.Binary(related='vehicle_id.image_128',
-                          string="Image of Vehicle")
+    # -- fields --------------------------------------------------------------
 
-    reserved_fleet_id = fields.Many2one('car.rental.reserved',
-                                        copy=False)
-    name = fields.Char(string="Name",
-                       default="Quote Contract",
-                       readonly=True,
-                       copy=False)
-    customer_id = fields.Many2one('res.partner',
-                                  required=True,
-                                  store=True,
-                                  string='Customer')
-    driver_id = fields.Many2one('res.partner',
-                                  required=True,
-                                  store=True,
-                                  string='Driver',
-                                  tracking=True)
-    driver_extra_id = fields.Many2one('res.partner',
-                                  required=False,
-                                  store=True,
-                                  string='Extra Driver',
-                                  tracking=True)
-    vehicle_id = fields.Many2one('fleet.vehicle',
-                                 string="Vehicle",
-                                 required=True,
-                                 tracking=True)
-    car_cost_per_day = fields.Float(string="Cost per day",
-                            default=0,
-                            tracking=True,
-                            store=True)
-    car_description = fields.Char(string="Car Description",
-                            related='vehicle_id.model_id.display_name',
-                            copy=False,
-                            readonly=True)
-    car_deposit = fields.Monetary(string="Car Deposit",
-                            help='Security deposit/Insuranse excess',
-                            related='vehicle_id.deposit',
-                            store=True,
-                            currency_field='company_currency_id')
-    car_km_included_per_day = fields.Integer(string="Km(s) included",
-                            related='vehicle_id.km_included_per_day',
-                            store=True,
-                            tracking=True)
-    car_km_extra = fields.Monetary(string="Km(s) extra",
-                            related='vehicle_id.km_extra',
-                            store=True,
-                            tracking=True,
-                            currency_field='company_currency_id')
-    rent_cost = fields.Float(string="Rent Cost",
-                        help="This fields is to determine the cost of rent",
-                        required=True,
-                        tracking=True)
-    rent_start_date = fields.Datetime(string="Rent Start Date",
-                                  required=True,
-                                  default=str(date.today()),
-                                  help="Start date of contract")
-    rent_start_date_locale = fields.Char(compute='_start_date_locale',
-                                         string="Rent Start Date (locale)",
-                                         copy=False)
-    calendar_start_date_id = fields.Many2one('calendar.event',
-                                        copy=False)
-    calendar_start_date_hash = fields.Char(string="Calendar end data hash",
-                            readonly=True)
-    pickup_location = fields.Char(string="Pickup location",
-                           required=True)
-    rent_end_date = fields.Datetime(string="Rent End Date",
-                                required=True,
-                                help="End date of contract",
-                                tracking=True)
-    rent_end_date_locale = fields.Char(compute='_end_date_locale',
-                                       string="Rent End Date (locale)",
-                                       copy=False)
-    calendar_end_date_id = fields.Many2one('calendar.event',
-                                        copy=False)
-    calendar_end_date_hash = fields.Char(string="Calendar end data hash",
-                            readonly=True)
-    dropoff_location = fields.Char(string="Return location",
-                           required=True)
-    state = fields.Selection(
-        [('draft', 'Quote'), ('reserved', 'Reserved'), ('running', 'Running'),
-         ('cancel', 'Cancel'),
-         ('checking', 'Checking'), ('invoice', 'Invoice'), ('done', 'Done')],
-        string="State", default="draft",
-        copy=False,
-        tracking=True)
-    notes = fields.Text(string="Details & Notes")
-
-    cost_generated = fields.Float(string='Recurring Cost',
-                                  help="Costs paid at regular intervals, depending on the cost frequency")
-    cost_frequency = fields.Selection(
-        [('no', 'No'), ('daily', 'Daily'), ('weekly', 'Weekly'),
-         ('monthly', 'Monthly')], string="Recurring Cost Frequency",
-        help='Frequency of the recurring cost', default="no", required=True)
-    journal_type = fields.Many2one('account.journal', 'Journal',
-                                   default=lambda self: self.env[
-                                       'account.journal'].search(
-                                       [('id', '=', 1)]))
-    recurring_line = fields.One2many('car.rental.line', 'rental_number',
-                                     readonly=True, help="Recurring Invoices",
-                                     copy=False)
-    first_payment = fields.Float(string='First Payment',
-                                 help="Transaction/Office/Contract charge "
-                                      "amount, must paid by customer side "
-                                      "other "
-                                      "than recurrent payments",
-                                 required=True)
-    first_payment_inv = fields.Many2one('account.move', copy=False)
-    first_invoice_created = fields.Boolean(string="First Invoice Created",
-                                           copy=False)
-    attachment_ids = fields.Many2many('ir.attachment',
-                                      'car_rental_contract_ir_attachments_rel',
-                                      'rental_id', 'attachment_id',
-                                      string="Attachments",
-                                      help="Images of the vehicle before "
-                                           "contract/any attachments")
-    line_tools = fields.One2many('car.rental.line.tools',
-                                     'contract_id', string="Checklist",
-                                     help="Facilities/Accessories, That should"
-                                          " verify when closing the contract.")
-    list_line_tools = fields.Html(string="Accessories/Tools",
-                                  compute='_compute_list_line_tools',
-                                  sanitize=False)
-    tools_cost = fields.Float(string="Total (Accessories/Tools)", readonly=True,
-                         copy=False)
-    damage_cost = fields.Float(string="Damage Cost / Balance Amount",
-                               copy=False)
-    total_cost = fields.Float(string="Total", readonly=True, copy=False)
-    invoice_count = fields.Integer(compute='_invoice_count',
-                                   string='# Invoice', copy=False)
-    sales_person = fields.Many2one('res.partner', string='Sales Person',
-                                   default=lambda self: self.env.user.partner_id.id)
-
-    read_only = fields.Boolean(string="Read Only", help="To make field read "
-                                                        "only")
+    name = fields.Char(string="Name", default=QUOTE_NAME, readonly=True, copy=False)
+    state = fields.Selection(STATES, string="State", default='draft', copy=False, tracking=True)
     company_id = fields.Many2one('res.company', string='Company',
                                  default=lambda self: self.env.company,
                                  help="Company this record owns")
     company_currency_id = fields.Many2one(related='company_id.currency_id')
+    soft_deleted = fields.Boolean(default=False)
+    notes = fields.Text(string="Details & Notes")
 
-    sent_quote = fields.Boolean(string="Quote sent",
-                                default=False, copy=False)
+    # people
+    customer_id = fields.Many2one('res.partner', string='Customer', required=True)
+    driver_id = fields.Many2one('res.partner', string='Driver', required=True, tracking=True)
+    driver_extra_id = fields.Many2one('res.partner', string='Extra Driver', tracking=True)
+    sales_person = fields.Many2one('res.partner', string='Sales Person',
+                                   default=lambda self: self.env.user.partner_id)
+    handle_pickup = fields.Many2one('res.partner', string='Handle Pickup',
+                                    help="Person in charge of the pick-up",
+                                    default=lambda self: self.env.user.partner_id)
+    handle_dropoff = fields.Many2one('res.partner', string='Handle Drop off',
+                                     help="Person in charge of the drop-off",
+                                     default=lambda self: self.env.user.partner_id)
 
-    contract_days = fields.Integer(compute='_contract_days',
-                                string='Number of Contract days', copy=False)
+    # vehicle
+    vehicle_id = fields.Many2one('fleet.vehicle', string="Vehicle", required=True, tracking=True)
+    image = fields.Binary(related='vehicle_id.image_128', string="Image of Vehicle")
+    car_description = fields.Char(string="Car Description",
+                                  related='vehicle_id.model_id.display_name')
+    car_deposit = fields.Monetary(string="Car Deposit", related='vehicle_id.deposit', store=True,
+                                  help='Security deposit/Insurance excess',
+                                  currency_field='company_currency_id')
+    car_km_included_per_day = fields.Integer(string="Km(s) included",
+                                             related='vehicle_id.km_included_per_day',
+                                             store=True, tracking=True)
+    car_km_extra = fields.Monetary(string="Km(s) extra", related='vehicle_id.km_extra',
+                                   store=True, tracking=True,
+                                   currency_field='company_currency_id')
+    reserved_fleet_id = fields.Many2one('car.rental.reserved', copy=False)
 
-    handle_pickup = fields.Many2one('res.partner',
-                                    string='Handle Pickup',
-                                    help="Person in charge of handle the pick up",
-                                    default=lambda self: self.env.user.partner_id.id)
+    # period
+    rent_start_date = fields.Datetime(string="Rent Start Date", required=True,
+                                      default=fields.Datetime.now,
+                                      help="Start date of contract")
+    rent_end_date = fields.Datetime(string="Rent End Date", required=True, tracking=True,
+                                    help="End date of contract")
+    rent_start_date_locale = fields.Char(compute='_compute_dates_locale',
+                                         string="Rent Start Date (locale)")
+    rent_end_date_locale = fields.Char(compute='_compute_dates_locale',
+                                       string="Rent End Date (locale)")
+    contract_days = fields.Integer(compute='_compute_contract_days',
+                                   string='Number of Contract days')
+    pickup_location = fields.Char(string="Pickup location", required=True)
+    dropoff_location = fields.Char(string="Return location", required=True)
+    read_only = fields.Boolean(string="Read Only",
+                               help="Set while the rent is being extended")
 
-    handle_dropoff = fields.Many2one('res.partner',
-                                     string='Handle Drop off',
-                                     help="Person in charge of handle the drop off",
-                                     default=lambda self: self.env.user.partner_id.id)
+    # prices
+    car_cost_per_day = fields.Float(string="Cost per day", default=0, tracking=True)
+    rent_cost = fields.Float(string="Rent Cost", required=True, tracking=True)
+    line_tools = fields.One2many('car.rental.line.tools', 'contract_id', string="Checklist",
+                                 help="Facilities/Accessories, That should"
+                                      " verify when closing the contract.")
+    list_line_tools = fields.Html(string="Accessories/Tools",
+                                  compute='_compute_list_line_tools', sanitize=False)
+    tools_cost = fields.Float(string="Total (Accessories/Tools)", copy=False,
+                              compute='_compute_totals', store=True)
+    damage_cost = fields.Float(string="Damage Cost / Balance Amount", copy=False)
+    total_cost = fields.Float(string="Total", copy=False, compute='_compute_totals', store=True)
+    sent_quote = fields.Boolean(string="Quote sent", default=False, copy=False)
 
-    rent_pickup_date = fields.Datetime(string="Rent Pickup Date and time",
-                                  required=True,
-                                  default=str(date.today()),
-                                  help="Date and time where the car was pickup")
+    # invoicing
+    journal_type = fields.Many2one('account.journal', 'Journal',
+                                   default=lambda self: self._default_journal())
+    first_payment = fields.Float(string='First Payment', required=True,
+                                 help="Transaction/Office/Contract charge amount, paid by "
+                                      "the customer on top of the recurring payments")
+    first_payment_inv = fields.Many2one('account.move', copy=False)
+    first_invoice_created = fields.Boolean(string="First Invoice Created", copy=False)
+    cost_generated = fields.Float(string='Recurring Cost',
+                                  help="Amount billed at each period of the cost frequency")
+    cost_frequency = fields.Selection(COST_FREQUENCIES, string="Recurring Cost Frequency",
+                                      help='Frequency of the recurring cost',
+                                      default='no', required=True)
+    recurring_line = fields.One2many('car.rental.line', 'rental_number', readonly=True,
+                                     help="Recurring Invoices", copy=False)
+    invoice_count = fields.Integer(compute='_compute_invoice_count', string='# Invoice')
 
+    # attachments
+    attachment_ids = fields.Many2many('ir.attachment',
+                                      'car_rental_contract_ir_attachments_rel',
+                                      'rental_id', 'attachment_id', string="Attachments",
+                                      help="Images of the vehicle before contract/any attachments")
+
+    # calendar
+    calendar_start_date_id = fields.Many2one('calendar.event', copy=False)
+    calendar_start_date_hash = fields.Char(string="Calendar start data hash", readonly=True)
+    calendar_end_date_id = fields.Many2one('calendar.event', copy=False)
+    calendar_end_date_hash = fields.Char(string="Calendar end data hash", readonly=True)
+
+    # pick-up and drop-off
+    rent_pickup_date = fields.Datetime(string="Rent Pickup Date and time", required=True,
+                                       default=fields.Datetime.now,
+                                       help="Date and time when the car was picked up")
     fuel_tunk_pickup = fields.Float(string="Fuel tunk pickup", default=0.0)
-
-    odometer_pickup_id = fields.Many2one('fleet.vehicle.odometer',
-                                    string="Km(s) pickup",
-                                    tracking=True)
-
+    odometer_pickup_id = fields.Many2one('fleet.vehicle.odometer', string="Km(s) pickup",
+                                         tracking=True)
     meters_pickup_value = fields.Float(string='Kilometrage pickup',
-                                    compute='_compute_meters_pickup_value',
-                                    inverse="_inverse_meters_pickup_value")
-
-    meters_pickup_unit = fields.Selection(string="Unit",
-                            related='odometer_pickup_id.unit',
-                            copy=False,
-                            readonly=True)
-
+                                       compute='_compute_meters_pickup_value',
+                                       inverse='_inverse_meters_pickup_value')
+    meters_pickup_unit = fields.Selection(string="Unit", related='odometer_pickup_id.unit')
     attachment_pickup_ids = fields.Many2many('ir.attachment',
-                            'car_rental_contract_pickup_ir_attachments_rel',
-                            'rental_id', 'attachment_id',
-                            string="Pickup attachments",
-                            help="Pictures during the pickup")
-
+                                             'car_rental_contract_pickup_ir_attachments_rel',
+                                             'rental_id', 'attachment_id',
+                                             string="Pickup attachments",
+                                             help="Pictures during the pickup")
     signature_pickup = fields.Binary("Signature")
+    send_contract = fields.Boolean(string="Send a contract to client", default=False)
+    rent_dropoff_date = fields.Datetime(string="Rent Dropoff Date and time", required=True,
+                                        default=fields.Datetime.now,
+                                        help="Date and time when the car was dropped off")
+    fuel_tunk_dropoff = fields.Float(string="Fuel tunk dropoff", default=0.0)
 
-    send_contract = fields.Boolean(string="Send a contrat to client",
-                                 inverse="_inverse_send_contract",
-                                 default=False)
+    # -- defaults --------------------------------------------------------------
 
-    rent_dropoff_date = fields.Datetime(string="Rent Dropoff Date and time",
-                                  required=True,
-                                  default=str(date.today()),
-                                  help="Date and time where the car was drop off")
+    @api.model
+    def _default_journal(self):
+        return self.env['account.journal'].search(
+            [('type', '=', 'sale'), ('company_id', '=', self.env.company.id)], limit=1)
 
-    fuel_tunk_dropoff = fields.Float(string="Total", default=0.0)
+    # -- computes ---------------------------------------------------------------
 
-    soft_deleted = fields.Boolean(default=False,
-                                 store=True)
+    def _compute_dates_locale(self):
+        for contract in self:
+            contract.rent_start_date_locale = format_datetime(
+                self.env, contract.rent_start_date, dt_format=False)
+            contract.rent_end_date_locale = format_datetime(
+                self.env, contract.rent_end_date, dt_format=False)
 
+    @api.depends('rent_start_date', 'rent_end_date')
+    def _compute_contract_days(self):
+        """Days billed: a day starts every 24 hours, after a grace period
+        (the tolerance delay) for late returns. An invalid period counts 0."""
+        tolerance = timedelta(hours=self._tolerance_delay())
+        for contract in self:
+            start, end = contract.rent_start_date, contract.rent_end_date
+            if start and end and end >= start:
+                contract.contract_days = (end - start - tolerance).days + 1
+            else:
+                contract.contract_days = 0
 
-    def action_run(self):
-        """
-            Set the state of the object to 'running'.
-        """
-        self.state = 'running'
+    @api.depends('line_tools.price', 'line_tools.quantity', 'rent_cost', 'damage_cost')
+    def _compute_totals(self):
+        for contract in self:
+            contract.tools_cost = sum(line.price * line.quantity for line in contract.line_tools)
+            contract.total_cost = contract.rent_cost + contract.tools_cost + contract.damage_cost
+
+    @api.depends('line_tools.name.name')
+    def _compute_list_line_tools(self):
+        for contract in self:
+            items = Markup().join(Markup("<li>%s</li>") % line.name.name
+                                  for line in contract.line_tools if line.name)
+            contract.list_line_tools = Markup("<ul>%s</ul>") % items
+
+    def _compute_invoice_count(self):
+        for contract in self:
+            contract.invoice_count = self.env['account.move'].search_count(
+                [('fleet_rent_id', '=', contract.id)])
+
+    @api.depends('odometer_pickup_id.value')
+    def _compute_meters_pickup_value(self):
+        for contract in self:
+            contract.meters_pickup_value = contract.odometer_pickup_id.value
+
+    def _inverse_meters_pickup_value(self):
+        for contract in self:
+            if contract.odometer_pickup_id:
+                contract.odometer_pickup_id.write({
+                    'value': contract.meters_pickup_value,
+                    'date': fields.Date.context_today(contract),
+                })
+            elif contract.meters_pickup_value:
+                contract.odometer_pickup_id = self.env['fleet.vehicle.odometer'].create({
+                    'vehicle_id': contract.vehicle_id.id,
+                    'value': contract.meters_pickup_value,
+                    'date': fields.Date.context_today(contract),
+                })
+
+    # -- onchanges (form only) ---------------------------------------------------
 
     @api.onchange('rent_start_date', 'rent_end_date')
-    def _onchange_start_date(self):
-        #if self.contract_days == 0:
-        #    self.rent_start_date =  self.rent_start_date.replace(hour=11)
-        #    self.rent_end_date =  self.rent_end_date.replace(hour=11)
+    def _onchange_rent_dates(self):
+        self._check_dates()
+        self._update_tool_quantities()
 
-        self._update_contract_days_count()
-        self._update_unit_tools()
-        if self.state == 'draft':
-            self._update_rent_cost()
-        self.total_updater()
+    @api.onchange('vehicle_id', 'rent_start_date', 'rent_end_date')
+    def _onchange_price(self):
+        self._apply_band_price()
 
     @api.onchange('line_tools')
     def _onchange_line_tools(self):
-       self._update_unit_tools()
-       self.total_updater()
+        self._update_tool_quantities()
 
-    def set_to_done(self):
-        """
-            Set the state of the object to 'done' based on certain conditions related to invoices.
-            Raise a UserError if certain invoices are pending or the total cost is zero.
-        """
-        #Double check if requires payment verification
-        #self._verify_payment()
-        self.state = 'done'
+    # -- constraints ---------------------------------------------------------------
 
-    def _check_availability(self):
-        _rent_from = datetime.strptime(str(self.rent_start_date), DATE_FORMAT)
-        _rent_to = datetime.strptime(str(self.rent_end_date), DATE_FORMAT)
+    @api.constrains('rent_start_date', 'rent_end_date')
+    def _check_dates(self):
+        for contract in self:
+            if contract.rent_start_date and contract.rent_end_date \
+                    and contract.rent_end_date < contract.rent_start_date:
+                raise ValidationError(_("Please select the valid end date."))
 
-        check_availability = True
-        for each in self.vehicle_id.rental_reserved_time:
-            if each.date_from <= _rent_to and each.date_to >= _rent_from:
-                check_availability = False
-        return check_availability, _rent_from, _rent_to
+    @api.constrains('rent_end_date')
+    def validate_on_read_only(self):
+        """While extending, the new end date must be after the reserved one."""
+        for contract in self.filtered('read_only'):
+            old_end = contract.reserved_fleet_id.date_to
+            if old_end and contract.rent_end_date <= old_end:
+                raise ValidationError(_("Please choose a date later than %s", old_end))
 
-    def _verify_payment(self):
-        invoice_ids = self.env['account.move'].search(
-            [('fleet_rent_id', '=', self.id)])
-        if any(each.payment_state != 'paid' for each in
-               invoice_ids):
-            raise UserError("Some Invoices are pending")
+    # -- ORM overrides --------------------------------------------------------------
 
-    def _invoice_count(self):
-        """
-            Calculate the count of invoices related to the current object.
-            Update the 'invoice_count' field accordingly.
-        """
-        self.invoice_count = self.env['account.move'].search_count(
-            [('fleet_rent_id', '=', self.id)])
+    def write(self, vals):
+        self._check_pickup_user_write(vals)
+        if PRICE_FIELDS & set(vals) and 'sent_quote' not in vals:
+            vals = dict(vals, sent_quote=False)
+        result = super().write(vals)
+        if 'state' in vals:
+            self._update_vehicle_state()
+        if CALENDAR_FIELDS & set(vals):
+            self._sync_calendar()
+        return result
 
-    def _start_date_locale(self):
-        self.rent_start_date_locale = format_datetime(self.env, self.rent_start_date, dt_format=False)
+    def unlink(self):
+        """Soft delete: hide the contract, free the vehicle, drop the events."""
+        self.check_access('unlink')
+        self._release_vehicle()
+        self.write({'soft_deleted': True})
+        _logger.info("Contracts %s were soft deleted", self.ids)
+        return True
 
-    def _end_date_locale(self):
-        self.rent_end_date_locale = format_datetime(self.env, self.rent_end_date, dt_format=False)
+    # -- rights ---------------------------------------------------------------------
 
-    @api.onchange('vehicle_id', 'contract_days')
-    def _car_cost_per_day(self):
-        self.car_cost_per_day = 0
-        if self.vehicle_id and self.contract_days > 0:
-            for rc in self.vehicle_id.rental_cost:
-                self._logger.debug(f"Cost per day [{rc.day_from} <= {self.contract_days} < {rc.day_to}] = {rc.cost_per_day}")
-                if rc.day_from <= self.contract_days <= rc.day_to:
-                    self.car_cost_per_day = rc.cost_per_day
-        self.total_updater()
+    def _is_pickup_user(self):
+        user = self.env.user
+        return not self.env.su and user.has_group(GROUP_PICKUP) and not user.has_group(GROUP_USER)
 
-    def _contract_days(self):
-        self._update_contract_days_count()
+    def _check_pickup_user_write(self, vals):
+        forbidden = set(vals) - PICKUP_FIELDS
+        if forbidden and self._is_pickup_user():
+            raise AccessError(_(
+                "Pickup/Dropoff users can only change the pick-up and drop-off details "
+                "(not allowed: %s).", ", ".join(sorted(forbidden))))
 
-    def _update_contract_days_count(self):
-        """
-            Check the validity of the 'rent_start_date' and 'rent_end_date'
-            fields. and calculate the number of days!
-            Raise a warning if 'rent_end_date' is earlier than
-            'rent_start_date'.
-        """
-        self.contract_days = 0
-        if self.rent_start_date and self.rent_end_date:
-            if self.rent_end_date < self.rent_start_date:
-                raise UserError("Please select the valid end date.")
-            self.contract_days = (self.rent_end_date
-                                  - self.rent_start_date
-                                  - timedelta(
-                                      hours=self._tolerance_delay()
-                                    )).days + 1
-        self._logger.debug(f"update contract_days: {self.contract_days}")
+    def _check_manage_rights(self):
+        """Business actions are for rental users, not Pickup/Dropoff users."""
+        if self._is_pickup_user():
+            raise AccessError(_("Only rental users can do this."))
+
+    # -- settings ----------------------------------------------------------------------
+
+    def _get_param(self, key, default=False):
+        return self.env['ir.config_parameter'].sudo().get_param(key, default)
 
     def _tolerance_delay(self):
         """Hours a customer may return late before another day is charged."""
-        value = self.env['ir.config_parameter'].sudo().get_param(
-            'fleet_rental_tolerance_delay', DEFAULT_TOLERANCE_DELAY)
-        return int(value or 0)
+        return int(self._get_param('fleet_rental_tolerance_delay', DEFAULT_TOLERANCE_DELAY) or 0)
+
+    def _service_product(self):
+        """The product used on rental invoices.
+
+        The setting stores a product template; without it (fresh install)
+        the module's own service product is used."""
+        template_id = self._get_param('fleet_rental_service_product_id')
+        template = self.env['product.template'].browse(int(template_id or 0)).exists()
+        return template.product_variant_id or self.env.ref('fleet_rental.fleet_service_product')
+
+    # -- local time ----------------------------------------------------------------------
+
+    def _local_tz(self):
+        tz = (self.env.context.get('tz') or self.env.user.tz
+              or self.env.company.partner_id.tz or 'UTC')
+        return pytz.timezone(tz)
+
+    def _local_date(self, value):
+        """The local date of a UTC datetime."""
+        return pytz.utc.localize(value).astimezone(self._local_tz()).date()
+
+    def _local_today(self):
+        return self._local_date(fields.Datetime.now())
+
+    # -- pricing --------------------------------------------------------------------------
+
+    def _price_band(self):
+        """The vehicle's price band covering the contract length, if any."""
+        self.ensure_one()
+        days = self.contract_days
+        return self.vehicle_id.rental_cost.filtered(
+            lambda band: band.day_from <= days <= band.day_to)[:1]
+
+    def _apply_band_price(self):
+        """Daily price from the price band, rent = daily price x days."""
+        for contract in self:
+            contract.car_cost_per_day = contract._price_band().cost_per_day
+            contract.rent_cost = contract.car_cost_per_day * max(contract.contract_days, 0)
 
     def _check_price_band(self):
         """Refuse a contract whose length no price band of its vehicle covers
         (it would be rented for free)."""
         for contract in self:
-            days = contract.contract_days
-            if not any(band.day_from <= days <= band.day_to
-                       for band in contract.vehicle_id.rental_cost):
+            if not contract._price_band():
                 raise UserError(_(
                     "No price band covers %(days)s days for vehicle %(vehicle)s. "
                     "Add one to the vehicle's rental prices.",
-                    days=days, vehicle=contract.vehicle_id.display_name))
+                    days=contract.contract_days, vehicle=contract.vehicle_id.display_name))
 
-    @api.onchange('car_cost_per_day', 'contract_days')
-    def _update_rent_cost(self):
-        if (self.contract_days <= 0) or (self.car_cost_per_day <= 0):
-            self.rent_cost = 0
-        else:
-            self.rent_cost = self.car_cost_per_day * self.contract_days
+    def _update_tool_quantities(self):
+        for contract in self:
+            for line in contract.line_tools:
+                line.quantity = contract.contract_days if line.unit == 'daily' else 1
 
-    def _update_unit_tools(self):
-        for r in self.line_tools:
-            if r.unit == 'daily':
-                r.quantity = self.contract_days
-            elif r.unit == 'once':
-                r.quantity = 1
+    # -- availability -----------------------------------------------------------------------
 
-    @api.constrains('state')
-    def state_changer(self):
-        """
-            Handle state transitions and update the 'state_id' of the
-            associated vehicle based on the value of the 'state' field.
-        """
+    def _check_availability(self):
+        """Refuse a period that overlaps another reservation of the vehicle.
+        A return and the next pick-up at the same time do not overlap."""
+        for contract in self:
+            others = contract.vehicle_id.rental_reserved_time - contract.reserved_fleet_id
+            if any(other.date_from < contract.rent_end_date
+                   and other.date_to > contract.rent_start_date for other in others):
+                raise UserError(_("Sorry, this vehicle is already booked by another customer."))
 
-        if self.state == "reserved":
-            self.sync_calendar_start()
-            self.sync_calendar_end()
+    def _release_vehicle(self):
+        """Remove the reservation and the calendar events."""
+        self.reserved_fleet_id.unlink()
+        (self.calendar_start_date_id | self.calendar_end_date_id).unlink()
 
-        if self.state == "running":
-            self.sync_calendar_end()
-            state_id = self.env.ref('fleet_rental.vehicle_state_rent').id
-            self.vehicle_id.write({'state_id': state_id})
-        elif self.state in ("cancel", "invoice"):
-            state_id = self.env.ref('fleet_rental.vehicle_state_active').id
-            self.vehicle_id.write({'state_id': state_id})
+    # -- state actions ---------------------------------------------------------------------------
 
+    def action_send_quote(self):
+        self._check_manage_rights()
+        self._check_availability()
+        template = self.env.ref('fleet_rental.mail_template_quote')
+        for contract in self:
+            contract.sent_quote = True
+            template.send_mail(contract.id, force_send=True)
 
-    @api.constrains('line_tools', 'damage_cost', 'rent_cost')
-    def total_updater(self):
-        """
-           Update various fields related to totals based on the values in
-           'line_tools', 'damage_cost', 'first_payment', 'cost' and other relevant fields.
-       """
-        self._logger.debug("Recalculate the values")
-        self.tools_cost = 0.0
-        for records in self.line_tools:
-            self.tools_cost += records.price * records.quantity
-        self.total_cost = self.rent_cost + self.tools_cost + self.damage_cost
-        self.sent_quote = False
+    def action_confirm(self):
+        """Reserve the vehicle, number the contract and send the booking mail."""
+        self._check_manage_rights()
+        self._check_price_band()
+        self._check_availability()
+        send_booking = self._get_param('fleet_rental_send_booking')
+        for contract in self:
+            contract.reserved_fleet_id = self.env['car.rental.reserved'].create({
+                'customer_id': contract.customer_id.id,
+                'date_from': contract.rent_start_date,
+                'date_to': contract.rent_end_date,
+                'reserved_obj_id': contract.vehicle_id.id,
+            })
+            values = {'state': 'reserved'}
+            if contract.name in (False, QUOTE_NAME):  # keep the number on re-confirm
+                values['name'] = contract._next_number()
+            contract.write(values)
+            if send_booking:
+                self.env.ref('fleet_rental.mail_template_reserved').send_mail(
+                    contract.id, force_send=True)
 
-    def fleet_scheduler1(self, rent_date):
-        """
-            Perform actions related to fleet scheduling, including creating
-            invoices, managing recurring data, and sending email notifications.
-        """
-        self._create_recurring_invoice(self, rent_date)
+    def _next_number(self):
+        self.ensure_one()
+        return self.env['ir.sequence'].with_company(self.company_id).with_context(
+            ir_sequence_date=fields.Date.to_string(self.create_date)
+        ).next_by_code('car.rental.sequence')
 
+    def action_move_to_quote(self):
+        self._check_manage_rights()
+        self.reserved_fleet_id.unlink()
+        self.state = 'draft'
+
+    def action_run(self):
+        self._check_manage_rights()
+        self.state = 'running'
+
+    def force_checking(self):
+        self._check_manage_rights()
+        self.state = 'checking'
+
+    def set_to_done(self):
+        self._check_manage_rights()
+        self.state = 'done'
+
+    def action_cancel(self):
+        self._check_manage_rights()
+        self._release_vehicle()
+        self.state = 'cancel'
+
+    def _update_vehicle_state(self):
+        rent = self.env.ref('fleet_rental.vehicle_state_rent')
+        active = self.env.ref('fleet_rental.vehicle_state_active')
+        for contract in self:
+            if contract.state == 'running':
+                contract.vehicle_id.state_id = rent
+            elif contract.state in ('cancel', 'invoice'):
+                contract.vehicle_id.state_id = active
+
+    # -- extension -----------------------------------------------------------------------------
+
+    def action_extend_rent(self):
+        """Unlock the end date to extend the rent."""
+        self._check_manage_rights()
+        self.read_only = True
+
+    def action_confirm_extend_rent(self):
+        """Extend the reservation to the new end date and re-price the rent."""
+        self._check_manage_rights()
+        self._check_price_band()
+        self._check_availability()
+        for contract in self:
+            contract.reserved_fleet_id.date_to = contract.rent_end_date
+            contract._apply_band_price()
+            contract._update_tool_quantities()
+            contract.read_only = False
+
+    def action_discard_extend(self):
+        self._check_manage_rights()
+        for contract in self:
+            contract.write({'read_only': False, 'rent_end_date': contract.reserved_fleet_id.date_to})
+
+    # -- crons ------------------------------------------------------------------------------------
+
+    def _active_contracts(self, states):
+        return self.search([('state', 'in', states), ('soft_deleted', '=', False)])
 
     @api.model
     def fleet_scheduler(self):
-        """
-            Perform fleet scheduling operations, including creating invoices,
-            managing recurring data, and sending email notifications.
-        """
-        for record in self.search([('state', 'in', ['reserved', 'running', 'invoice'])]):
-
-            start_date = datetime.strptime(str(record.rent_start_date),
-                                           DATE_FORMAT).date()
-
-            end_date = datetime.strptime(str(record.rent_end_date),
-                                         DATE_FORMAT).date()
-
-            if start_date <= date.today() and record.state == 'reserved':
-                self._logger.info(f"{record.id} moved to running")
-                record.state = "running"
-
-            if end_date >= date.today() and record.state == 'running':
-                temp = 0
-                if record.cost_frequency == 'daily':
-                    temp = 1
-                elif record.cost_frequency == 'weekly':
-                    week_days = (date.today() - start_date).days
-                    if week_days % 7 == 0 and week_days != 0:
-                        temp = 1
-                elif record.cost_frequency == 'monthly':
-                    if start_date.day == date.today().day and start_date != date.today():
-                        temp = 1
-                if temp == 1 and record.cost_frequency != "no":
-                    self._create_recurring_invoice(record)
-            elif end_date <= date.today() and record.state == 'running':
-                self._logger.info(f"{record.id} moved to checking")
-                record.state = "checking"
-
-            #Close the day
-            if record.state == 'invoice':
-                self._logger.info(f"{record.id} moved to done")
-                record.state = "done"
+        """Daily: start the rentals of today, bill the recurring periods,
+        move finished rentals to checking and close invoiced ones."""
+        today = self._local_today()
+        for contract in self._active_contracts(['reserved', 'running', 'invoice']):
+            contract = contract.with_company(contract.company_id)
+            if contract.state == 'reserved' and self._local_date(contract.rent_start_date) <= today:
+                _logger.info("Contract %s moved to running", contract.id)
+                contract.state = 'running'
+            if contract.state == 'running':
+                contract._bill_recurring_periods(today)
+                if self._local_date(contract.rent_end_date) < today:
+                    _logger.info("Contract %s moved to checking", contract.id)
+                    contract.state = 'checking'
+            elif contract.state == 'invoice':
+                _logger.info("Contract %s moved to done", contract.id)
+                contract.state = 'done'
 
     @api.model
     def next_event(self):
-        """
-            Notify the seller about the next day events
-        """
-        next_day = date.today() + timedelta(days=1)
-        next_pickup_template = self.env.ref('fleet_rental.mail_template_next_pickup')
-        for record in self.search([('state', '=', 'reserved' )]):
-            start_date = datetime.strptime(str(record.rent_start_date),
-                                           DATE_FORMAT).date()
-            if start_date == next_day:
-                next_pickup_template.send_mail(record.id)
+        """Daily: remind the handlers of tomorrow's pick-ups and drop-offs."""
+        tomorrow = self._local_today() + timedelta(days=1)
+        pickup = self.env.ref('fleet_rental.mail_template_next_pickup')
+        for contract in self._active_contracts(['reserved']):
+            if self._local_date(contract.rent_start_date) == tomorrow:
+                pickup.send_mail(contract.id)
+        dropoff = self.env.ref('fleet_rental.mail_template_next_dropoff')
+        for contract in self._active_contracts(['running']):
+            if self._local_date(contract.rent_end_date) == tomorrow:
+                dropoff.send_mail(contract.id)
 
-            if start_date > date.today():
-                self.action_run()
+    # -- invoicing ----------------------------------------------------------------------------------
 
-        next_dropoff_template = self.env.ref('fleet_rental.mail_template_next_dropoff')
-        for record in self.search([('state', '=', 'running' )]):
-            end_date = datetime.strptime(str(record.rent_end_date),
-                                         DATE_FORMAT).date()
-            if end_date == next_day:
-                next_dropoff_template.send_mail(record.id)
+    def _income_account(self, product):
+        product = product.with_company(self.company_id)
+        account = (product.property_account_income_id
+                   or product.categ_id.property_account_income_categ_id)
+        if not account:
+            raise UserError(_('Please define income account for this product: "%(name)s" (id:%(id)d).',
+                              name=product.name, id=product.id))
+        return account
 
+    def _invoice_line(self, name, amount):
+        product = self._service_product()
+        return Command.create({
+            'name': name,
+            'product_id': product.id,
+            'account_id': self._income_account(product).id,
+            'price_unit': amount,
+            'quantity': 1,
+        })
 
-    def _compute_meters_pickup_value(self):
-        if not self.odometer_pickup_id.id:
-            self.odometer_pickup_id = self.env['fleet.vehicle.odometer'].create({
-                    'vehicle_id': self.vehicle_id.id,
-                    'date': fields.Date.today(),
-                    'driver_id': self.env.user.partner_id
-                })
-            self._logger.info(f"Create the odometer {self.odometer_pickup_id.id} for pickup!!!!")
-        self.meters_pickup_value = self.odometer_pickup_id.value
-
-    def _inverse_meters_pickup_value(self):
-        self.odometer_pickup_id.date = fields.Date.today()
-        self.odometer_pickup_id.driver_id = self.env.user.partner_id
-        self.odometer_pickup_id.value = self.meters_pickup_value
-
-    def _compute_list_line_tools(self):
-        for r in self:
-            html = "<ul>"
-            for l in r.line_tools:
-                for x in l.name:
-                    html += f"<li>{x.name}</li>"
-            html += "</ul>"
-            r.list_line_tools = html
-
-    def _inverse_send_contract(self):
-        self._logger.info(f"Must send this contract to the client")
-
-
-
-    def _create_recurring_invoice(self, record, invoice_date = date.today()):
-
-        inv_obj = self.env['account.move']
-        recurring_obj = self.env['car.rental.line']
-        supplier = record.customer_id
-        product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))],
-            limit=1)
-        if product.property_account_income_id.id:
-            income_account = product.property_account_income_id
-        elif product.categ_id.property_account_income_categ_id.id:
-            income_account = product.categ_id.property_account_income_categ_id
-        else:
-            raise UserError(
-                _('Please define income account for this product: "%s" (id:%d).') % (
-                    product.name,
-                    product.id))
-
-        inv_data = {
-            'ref': supplier.name,
-            'partner_id': supplier.id,
-            'currency_id': record.company_id.currency_id.id,
-            'journal_id': record.journal_type.id,
-            'invoice_origin': record.name,
-            'fleet_rent_id': record.id,
-            'invoice_date': invoice_date,
-            'company_id': record.company_id.id,
-            'invoice_payment_term_id': None,
-            'invoice_date_due': record.rent_end_date,
+    def _create_invoice(self, lines, **values):
+        self.ensure_one()
+        return self.env['account.move'].with_company(self.company_id).create({
             'move_type': 'out_invoice',
-            'invoice_line_ids': [(0, 0, {
-                'name': self.vehicle_id.name,
-                'account_id': income_account.id,
-                'price_unit': record.cost_generated,
-                'quantity': 1,
-                'product_id': product.id,
-            })]
-        }
-        inv_id = inv_obj.create(inv_data)
-        recurring_data = {
-            'name': record.vehicle_id.name,
-            'date_today': invoice_date,
-            'account_info': income_account.name,
-            'rental_number': record.id,
-            'recurring_amount': record.cost_generated,
-            'invoice_number': inv_id.id,
-            'invoice_ref': inv_id.id,
-        }
-        recurring_obj.create(recurring_data)
-        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_send_recurring_reminder'):
-            reservation_template = self.env.ref('fleet_rental.mail_template_recurring_reminder').with_context(
-                invoice=inv_id
-            )
-            reservation_template.send_mail(self.id)
-        return inv_id
-
-
-    def action_verify(self):
-        """
-            Verifies the damage cost or missing cost
-        """
-        self.state = "invoice"
-        self.reserved_fleet_id.unlink()
-        #self.rent_end_date = fields.Date.today()
-        product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))],
-            limit=1)
-        if product.property_account_income_id.id:
-            income_account = product.property_account_income_id
-        elif product.categ_id.property_account_income_categ_id.id:
-            income_account = product.categ_id.property_account_income_categ_id
-        else:
-            raise UserError(
-                _('Please define income account for this product: "%s" (id:%d).') % (
-                    product.name,
-                    product.id))
-
-        if self.total_cost != 0:
-            inv_lines = []
-
-            if self.rent_cost > 0:
-                inv_lines.append((0, 0, {
-                        'name': self.vehicle_id.name,
-                        'account_id': income_account.id,
-                        'price_unit': self.rent_cost - self.first_payment,
-                        'quantity': 1,
-                        'product_id': product.id,
-                    }))
-
-            if self.tools_cost > 0:
-                inv_lines.append((0, 0, {
-                        'name': "Accessories/Tools",
-                        'account_id': income_account.id,
-                        'price_unit': self.tools_cost,
-                        'quantity': 1,
-                        'product_id': product.id,
-                    }))
-
-            if self.damage_cost > 0:
-                inv_lines.append((0, 0, {
-                        'name': "Damage/Tools missing cost",
-                        'account_id': income_account.id,
-                        'price_unit': self.damage_cost,
-                        'quantity': 1,
-                        'product_id': product.id,
-                    }))
-
-            supplier = self.customer_id
-            inv_data = {
-                'ref': supplier.name,
-                'move_type': 'out_invoice',
-                'partner_id': supplier.id,
-                'currency_id': self.company_id.currency_id.id,
-                'journal_id': self.journal_type.id,
-                'invoice_origin': self.name,
-                'fleet_rent_id': self.id,
-                'company_id': self.company_id.id,
-                'invoice_date_due': self.rent_end_date,
-                'invoice_line_ids': inv_lines
-            }
-
-            inv_id = self.env['account.move'].create(inv_data)
-
-            action = self.env.ref('account.action_move_out_invoice_type')
-            result = {
-                'name': action.name,
-                'type': 'ir.actions.act_window',
-                'views': [[False, 'form']],
-                'target': 'current',
-                'res_id': inv_id.id,
-                'res_model': 'account.move',
-            }
-            return result
-
-    def action_send_quote(self):
-        check_availability, _, _ = self._check_availability()
-        if not check_availability:
-           raise UserError(
-                'Sorry This vehicle is already booked by another customer')
-
-        self.sent_quote=True
-        quote_template = self.env.ref('fleet_rental.mail_template_quote')
-        quote_template.send_mail(self.id, force_send=True)
-
-    def action_confirm(self):
-        """
-           Confirm the rental contract, check vehicle availability, update
-           state to "reserved," generate a sequence code, and send a
-           confirmation email.
-        """
-        self._check_price_band()
-        check_availability, _rent_from, _rent_to = self._check_availability()
-        if check_availability:
-            reserved_id = self.vehicle_id.rental_reserved_time.create(
-                {'customer_id': self.customer_id.id,
-                 'date_from': _rent_from,
-                 'date_to': _rent_to,
-                 'reserved_obj_id': self.vehicle_id.id
-                 })
-            self.write({'reserved_fleet_id': reserved_id.id})
-        else:
-            raise UserError(
-                'Sorry This vehicle is already booked by another customer')
-        self.state = "reserved"
-        sequence_code = 'car.rental.sequence'
-        order_date = self.create_date
-        order_date = str(order_date)[0:10]
-        self.name = self.env['ir.sequence'] \
-            .with_context(ir_sequence_date=order_date).next_by_code(
-            sequence_code)
-
-        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_send_booking'):
-            reservation_template = self.env.ref('fleet_rental.mail_template_reserved')
-            reservation_template.send_mail(self.id, force_send=True)
-
-    def action_cancel(self):
-        """
-           Cancel the rental contract.
-           Update the state to "cancel" and delete the associated reserved
-           fleet ID if it exists.
-       """
-        if self.reserved_fleet_id:
-            self.reserved_fleet_id.unlink()
-
-        if self.calendar_start_date_id:
-            self.calendar_start_date_id.unlink()
-
-        if self.calendar_end_date_id:
-            self.calendar_end_date_id.unlink()
-        self.state = "cancel"
-
-    def force_checking(self):
-        """
-            Force the checking of payment status for associated invoices.
-            If all invoices are marked as paid, update the state to "checking."
-            Otherwise, raise a UserError indicating that some invoices are
-            pending.
-        """
-
-        #Double check if requires payment verification
-        #self._verify_payment()
-        self.state = "checking"
-
-    def action_view_invoice(self):
-        """
-            Display the associated invoices for the current record.
-            Construct the appropriate view configurations based on the number
-            of invoices found.
-        """
-        inv_obj = self.env['account.move'].search(
-            [('fleet_rent_id', '=', self.id)])
-        inv_ids = []
-        for each in inv_obj:
-            inv_ids.append(each.id)
-        view_id = self.env.ref('account.view_move_form').id
-        if inv_ids:
-            if len(inv_ids) <= 1:
-                value = {
-                    'view_type': 'form',
-                    'view_mode': 'form',
-                    'res_model': 'account.move',
-                    'view_id': view_id,
-                    'type': 'ir.actions.act_window',
-                    'name': _('Invoice'),
-                    'res_id': inv_ids and inv_ids[0]
-                }
-            else:
-                value = {
-                    'domain': [('fleet_rent_id', '=', self.id)],
-                    'view_type': 'form',
-                    'view_mode': 'list,form',
-                    'res_model': 'account.move',
-                    'view_id': False,
-                    'type': 'ir.actions.act_window',
-                    'name': _('Invoice'),
-                }
-            return value
-
-    def action_invoice_create(self):
-        """
-            Create an invoice for the rental contract.
-            Calculate the rental duration and iterate over each day to create
-            invoices.
-            Create the first payment invoice, add relevant invoice line data,
-            and send an email notification for the received payment.
-        """
-        for each in self:
-            rent_date = self.rent_start_date
-            if each.cost_frequency != 'no' and rent_date < date.today():
-                rental_days = (date.today() - rent_date).days
-                if each.cost_frequency == 'weekly':
-                    rental_days = int(rental_days / 7)
-                if each.cost_frequency == 'monthly':
-                    rental_days = int(rental_days / 30)
-                for _ in range(0, rental_days + 1):
-                    if rent_date > datetime.strptime(str(each.rent_end_date),
-                                                     "%Y-%m-%d").date():
-                        break
-                    each.fleet_scheduler1(rent_date)
-                    if each.cost_frequency == 'daily':
-                        rent_date = rent_date + timedelta(days=1)
-                    if each.cost_frequency == 'weekly':
-                        rent_date = rent_date + timedelta(days=7)
-                    if each.cost_frequency == 'monthly':
-                        rent_date = rent_date + timedelta(days=30)
-        self.first_invoice_created = True
-        inv_obj = self.env['account.move']
-        supplier = self.customer_id
-        inv_data = {
-            'ref': supplier.name,
-            'move_type': 'out_invoice',
-            'partner_id': supplier.id,
+            'ref': self.customer_id.name,
+            'partner_id': self.customer_id.id,
             'currency_id': self.company_id.currency_id.id,
             'journal_id': self.journal_type.id,
             'invoice_origin': self.name,
             'fleet_rent_id': self.id,
             'company_id': self.company_id.id,
-            'invoice_date_due': self.rent_end_date,
-            'is_first_invoice': True,
-        }
-        inv_id = inv_obj.create(inv_data)
-        self.first_payment_inv = inv_id.id
+            'invoice_date_due': self._local_date(self.rent_end_date),
+            'invoice_line_ids': lines,
+            **values,
+        })
 
-        product = self.env['product.product'].search(
-            [('id', '=', self.env['ir.config_parameter'].sudo().get_param('fleet_rental_service_product_id'))],
-            limit=1)
-
-        if product.property_account_income_id.id:
-            income_account = product.property_account_income_id.id
-        elif product.categ_id.property_account_income_categ_id.id:
-            income_account = product.categ_id.property_account_income_categ_id.id
-        else:
-            raise UserError(
-                _('Please define income account for this product: "%s" (id:%d).') % (
-                    product.name,
-                    product.id))
-
-        if inv_id:
-            list_value = [(0, 0, {
-                'name': self.vehicle_id.name,
-                'price_unit': self.first_payment,
-                'quantity': 1.0,
-                'account_id': income_account,
-                'product_id': product.id,
-                'move_id': inv_id.id,
-            })]
-            inv_id.write({'invoice_line_ids': list_value})
-        action = self.env.ref('account.action_move_out_invoice_type')
-        result = {
-            'name': action.name,
+    def _invoice_action(self, invoice):
+        return {
+            'name': _('Invoice'),
             'type': 'ir.actions.act_window',
             'views': [[False, 'form']],
             'target': 'current',
-            'res_id': inv_id.id,
+            'res_id': invoice.id,
             'res_model': 'account.move',
         }
-        return result
 
-    def action_extend_rent(self):
-        """
-            Set the 'read_only' attribute to True, indicating that the rent
-            extension action is being performed and the corresponding fields
-            should be made read-only.
+    def _billing_dates(self, until):
+        """Start dates of the recurring periods up to `until`: the first on
+        the start date, none after the end date."""
+        self.ensure_one()
+        step = BILLING_STEP.get(self.cost_frequency)
+        if not step:
+            return []
+        start = self._local_date(self.rent_start_date)
+        last = min(until, self._local_date(self.rent_end_date))
+        dates, n = [], 0
+        while start + step * n <= last:
+            dates.append(start + step * n)
+            n += 1
+        return dates
 
-            This method is typically used in the context of extending a rental
-            agreement.
-        """
-        self.read_only = True
+    def _bill_recurring_periods(self, until):
+        """Invoice every recurring period up to `until` not invoiced yet
+        (catches up missed days, never bills a period twice)."""
+        for contract in self:
+            billed = set(contract.recurring_line.mapped('date_today'))
+            for day in contract._billing_dates(until):
+                if day not in billed:
+                    contract._create_recurring_invoice(day)
 
-    def action_confirm_extend_rent(self):
-        """
-            Confirm the extension of a rental agreement and update the rental
-            reserved time for the associated vehicle.
+    def _create_recurring_invoice(self, invoice_date):
+        self.ensure_one()
+        line = self._invoice_line(self.vehicle_id.name, self.cost_generated)
+        invoice = self._create_invoice([line], invoice_date=invoice_date)
+        self.env['car.rental.line'].create({
+            'name': self.vehicle_id.name,
+            'date_today': invoice_date,
+            'account_info': invoice.invoice_line_ids.account_id.name,
+            'rental_number': self.id,
+            'recurring_amount': self.cost_generated,
+            'invoice_number': invoice.id,
+            'invoice_ref': invoice.id,
+        })
+        if self._get_param('fleet_rental_send_recurring_reminder'):
+            self.env.ref('fleet_rental.mail_template_recurring_reminder').with_context(
+                invoice=invoice).send_mail(self.id)
+        return invoice
 
-            This method sets the 'date_to' field of the rental reserved time
-            for the vehicle to the specified 'rent_end_date', indicating the
-            extended rental period. After confirming the extension, the
-            'read_only' attribute is set to False to allow further
-            modifications.
+    def action_invoice_create(self):
+        """Bill the recurring periods due so far, then the first payment."""
+        self._check_manage_rights()
+        invoice = self.env['account.move']
+        for contract in self:
+            contract._bill_recurring_periods(self._local_today())
+            invoice = contract._create_invoice(
+                [contract._invoice_line(contract.vehicle_id.name, contract.first_payment)],
+                is_first_invoice=True)
+            contract.write({'first_payment_inv': invoice.id, 'first_invoice_created': True})
+        return self._invoice_action(invoice)
 
-            This method is typically called when a user confirms the extension
-            of a rental.
-        """
-        self.reserved_fleet_id.write(
-            {
-                'date_to': self.rent_end_date,
-            })
-        self.read_only = False
-        self.sync_calendar_end()
+    def _recurring_invoiced(self):
+        """Amount of the recurring invoices issued and not cancelled."""
+        self.ensure_one()
+        return sum(line.recurring_amount for line in self.recurring_line
+                   if line.invoice_ref.state != 'cancel')
 
-    @api.constrains('rent_end_date')
-    def validate_on_read_only(self):
-        if self.read_only:
-            old_date = self.reserved_fleet_id.date_to
-            if self.rent_end_date <= old_date:
-                raise ValidationError(
-                    f"Please choose a date greater that {old_date}")
+    def action_verify(self):
+        """Close the rent (checking -> invoice) and issue the final invoice:
+        rent - first payment - recurring invoices + tools + damage."""
+        self._check_manage_rights()
+        self.ensure_one()
+        self.state = 'invoice'
+        self.reserved_fleet_id.unlink()
+        amounts = [
+            (self.vehicle_id.name, self.rent_cost - self.first_payment - self._recurring_invoiced()),
+            (_("Accessories/Tools"), self.tools_cost),
+            (_("Damage/Tools missing cost"), self.damage_cost),
+        ]
+        lines = [self._invoice_line(name, amount) for name, amount in amounts if amount]
+        if lines:
+            return self._invoice_action(self._create_invoice(lines))
 
-    def action_discard_extend(self):
-        """
-            Validate the 'rent_end_date' when the rental agreement is in
-            read-only mode.
+    def action_view_invoice(self):
+        self.ensure_one()
+        invoices = self.env['account.move'].search([('fleet_rent_id', '=', self.id)])
+        if not invoices:
+            return False
+        if len(invoices) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Invoice'),
+                'res_model': 'account.move',
+                'view_mode': 'form',
+                'view_id': self.env.ref('account.view_move_form').id,
+                'res_id': invoices.id,
+            }
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Invoice'),
+            'res_model': 'account.move',
+            'view_mode': 'list,form',
+            'domain': [('fleet_rent_id', '=', self.id)],
+        }
 
-            This constraint checks if the rental agreement is marked as
-            read-only, indicating that it has been extended or modified. If in
-            read-only mode, it compares the 'rent_end_date' with the existing
-            'date_to' value in the rental reserved time of the associated
-            vehicle. It ensures that the 'rent_end_date' is greater than the
-            existing date to maintain consistency.
+    # -- calendar -----------------------------------------------------------------------------------
 
-            :raises ValidationError: If the 'rent_end_date' is not greater than
-                                    the existing 'date_to', a validation error
-                                    is raised with a relevant error message.
-        """
-        self.read_only = False
-        self.rent_end_date = self.reserved_fleet_id.date_to
+    def _calendar_event_values(self, kind):
+        """Values of the pick-up ('start') or drop-off ('end') event."""
+        self.ensure_one()
+        if kind == 'start':
+            title, when, where, handler = _("Pick up"), self.rent_start_date, self.pickup_location, self.handle_pickup
+        else:
+            title, when, where, handler = _("Drop off"), self.rent_end_date, self.dropoff_location, self.handle_dropoff
+        rows = [
+            (_("Vehicle"), self.vehicle_id.name),
+            (_("Customer"), self.customer_id.name),
+            (_("Customer Phone"), self.customer_id.phone),
+            (_("Customer Mobile"), self.customer_id.mobile),
+            (_("Driver"), self.driver_id.name),
+            (_("Driver Phone"), self.driver_id.phone),
+            (_("Driver Mobile"), self.driver_id.mobile),
+        ]
+        if kind == 'start':
+            rows.append((_("Deposit"), self.car_deposit))
+        rows.append((title, "%s (%s)" % (where, when)))
+        if kind == 'start':
+            rows.append((_("Obs"), self.notes))
+        description = Markup("<br/>").join(Markup("%s : %s") % (label, value or '')
+                                           for label, value in rows)
+        alarms = self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
+        return {
+            'name': "%s : %s" % (title, self.vehicle_id.name),
+            'location': where,
+            'start': when - timedelta(minutes=30),
+            'stop': when,
+            'duration': 0.5,
+            'allday': False,
+            'show_as': 'free',
+            'partner_ids': [Command.set((self.sales_person | handler).ids)],
+            'alarm_ids': [Command.set(alarms.ids)],
+            'description': description,
+        }
 
-    def unlink(self):
-        if self.reserved_fleet_id:
-            self.reserved_fleet_id.unlink()
-        return super().unlink()
+    def _sync_calendar_event(self, kind):
+        """Create or update one event; skip the write when nothing changed."""
+        self.ensure_one()
+        event_field, hash_field = 'calendar_%s_date_id' % kind, 'calendar_%s_date_hash' % kind
+        values = self._calendar_event_values(kind)
+        digest = hashlib.sha256(json.dumps(values, default=str, sort_keys=True).encode()).hexdigest()
+        event = self[event_field]
+        if event and self[hash_field] == digest:
+            return
+        Event = self.env['calendar.event'].with_user(SUPERUSER_ID).with_context(mail_notify_author=True)
+        if event:
+            Event.browse(event.id).write(values)
+        else:
+            event = Event.create(values)
+        self.sudo().write({event_field: event.id, hash_field: digest})
 
-    @api.constrains('handle_pickup')
-    def handle_pickup_updater(self):
-        self.sync_calendar_start()
-
-    @api.constrains('handle_dropoff')
-    def handle_dropoff_updater(self):
-        self.sync_calendar_end()
+    def _calendar_sync_enabled(self):
+        return bool(self._get_param('fleet_rental_calendar_sync'))
 
     def sync_calendar_start(self):
-        self._logger.debug("Sync Calendar Start")
-        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
-            self._logger.debug("Sync Calendar_start criteria are met!")
-            calendar_start_date_val = {
-                    'duration': 0.5,
-                    'name': f'Pick up : {self.vehicle_id.name}',
-                    'location': self.pickup_location,
-                    'start': self.rent_start_date - timedelta(minutes=30),
-                    'stop': self.rent_start_date,
-                    'allday': False,
-                    'show_as': 'free',
-                    'partner_ids': (self.sales_person.id, self.handle_pickup.id),
-                    'alarm_ids': (
-                        self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
-                    ),
-                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Deposit : {self.car_deposit}<br/>Pick up : {self.pickup_location} at {self.rent_start_date}<br/>Obs : {self.notes}'''
-                }
-            ch = str(hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
-                                 self.pickup_location,
-                                 self.rent_start_date,
-                                 self.sales_person.id,
-                                 self.handle_pickup.id,
-                                 self.customer_id.name,
-                                 self.customer_id.phone,
-                                 self.customer_id.mobile)))
-            if not self.calendar_start_date_id.id:
-                self.calendar_start_date_id = self.env['calendar.event'].with_user(
-                    self.env['res.users'].browse(1)).with_context(
-                        mail_notify_author=True).create(calendar_start_date_val)
-                self.calendar_start_date_hash = ch
-                self._logger.debug("Sync Calendar_start create event")
-            elif self.calendar_start_date_hash != ch:
-                self._logger.debug(f"Sync Calendar_start update {self.calendar_start_date_hash} != {ch}")
-                self.calendar_start_date_id.with_user(
-                    self.env['res.users'].browse(1)).with_context(
-                        mail_notify_author=True).write(calendar_start_date_val)
-                self.calendar_start_date_hash = ch
-                self._logger.debug("Sync Calendar_start update event")
+        if self._calendar_sync_enabled():
+            for contract in self.filtered(lambda c: c.state in ('reserved', 'running')):
+                contract._sync_calendar_event('start')
 
     def sync_calendar_end(self):
-        self._logger.debug("Sync Calendar End")
-        if self.env['ir.config_parameter'].sudo().get_param('fleet_rental_calendar_sync') and self.state in ['reserved', 'running']:
-            self._logger.debug("Sync Calendar_end criteria are met!")
-            calendar_end_date_val = {
-                    'duration': 0.5,
-                    'name': f'Drop off : {self.vehicle_id.name}',
-                    'location': self.pickup_location,
-                    'start': self.rent_end_date - timedelta(minutes=30),
-                    'stop': self.rent_end_date,
-                    'allday': False,
-                    'show_as': 'free',
-                    'partner_ids': (self.sales_person.id, self.handle_dropoff.id),
-                    'alarm_ids': (
-                        self.env['calendar.alarm'].search([('duration', '=', 1), ('interval', '=', 'days')])
-                    ),
-                    'description': f'''Vehicle : {self.vehicle_id.name}<br/>Customer : {self.customer_id.name}<br/>Customer Phone : {self.customer_id.phone}<br/>Customer Mobile : {self.customer_id.mobile}<br/>Driver : {self.driver_id.name}<br/>Driver Phone : {self.driver_id.phone}<br/>Driver Mobile : {self.driver_id.mobile}<br/>Drop off : {self.dropoff_location} ({self.rent_end_date})'''
-                }
-            ch =  str(hash("%s:%s:%s:%s:%s:%s:%s:%s"% (self.vehicle_id.name,
-                        self.dropoff_location,
-                        self.rent_end_date,
-                        self.sales_person.id,
-                        self.handle_dropoff.id,
-                        self.customer_id.name,
-                        self.customer_id.phone,
-                        self.customer_id.mobile)))
-            if not self.calendar_end_date_id.id:
-                self.calendar_end_date_id= self.env['calendar.event'].with_user(
-                    self.env['res.users'].browse(1)).with_context(
-                        mail_notify_author=True).create(calendar_end_date_val)
-                self.calendar_end_date_hash = ch
-                self._logger.debug("Sync Calendar_end create event")
-            elif self.calendar_end_date_hash != ch:
-                self._logger.debug(f"Sync Calendar_end update {self.calendar_end_date_hash} != {ch}")
-                self.calendar_end_date_id.with_user(
-                    self.env['res.users'].browse(1)).with_context(
-                        mail_notify_author=True).write(calendar_end_date_val)
-                self.calendar_end_date_hash = ch
-                self._logger.debug("Sync Calendar_end update event")
+        if self._calendar_sync_enabled():
+            for contract in self.filtered(lambda c: c.state in ('reserved', 'running')):
+                contract._sync_calendar_event('end')
 
-    def action_move_to_quote(self):
-        """
-           Move the rental contract to quotation, update
-           state to "quote" and unreserve the vehicle.
-        """
-        self.reserved_fleet_id.unlink()
-        self.state = "draft"
+    def _sync_calendar(self):
+        """Keep the pick-up and drop-off events in line with the contract:
+        the pick-up event until the car is picked up, the drop-off event
+        until it is returned."""
+        self.filtered(lambda c: c.state == 'reserved').sync_calendar_start()
+        self.sync_calendar_end()
+
+    # -- documents ----------------------------------------------------------------------------------
 
     def _get_contract_filename(self):
-        return  ("contract_%s.pdf" % self.name.replace('/', '_')).lower()
+        return ("contract_%s.pdf" % self.name.replace('/', '_')).lower()
 
     def _get_reserve_filename(self):
-        return  ("reserve_%s.pdf" % self.name.replace('/', '_')).lower()
+        return ("reserve_%s.pdf" % self.name.replace('/', '_')).lower()
 
     def action_generate_contract(self):
-        #Delete previous contract!
-        self.env['ir.attachment'].sudo().search([('res_model', '=', self._name),
-                                                 ('name', '=', self._get_contract_filename()),
-                                                 ('res_id', '=', self.id)]).unlink()
-        # Generate the PDF using the report
-        pdf_content, t  = self.env['ir.actions.report'].with_context(force_report_rendering=True)._render_qweb_pdf('fleet_rental.car_rental_contract_pdf', res_ids=self.id)
-        self._logger.info(t)
-
-        # Save the PDF as an attachment
-        self.attachment_ids = [(4, self.env['ir.attachment'].create({
-            'name': self._get_contract_filename(),
-            'type': 'binary',
-            'datas': base64.encodebytes(pdf_content),
-            'res_model': self._name,
-            'res_id': self.id,
-            'mimetype': 'application/pdf',
-        }).id)]
-
-    def unlink(self):
-        for record in self:
-
-            if record.reserved_fleet_id:
-                record.reserved_fleet_id.unlink()
-
-            if record.calendar_start_date_id:
-                record.calendar_start_date_id.unlink()
-
-            if record.calendar_end_date_id:
-                record.calendar_end_date_id.unlink()
-
-            record.soft_deleted=True
-            self._logger.info(f"The contract {record.id} was soft deleted!")
-        return True
+        """Render the contract PDF and attach it, replacing the previous one."""
+        self._check_manage_rights()
+        Attachment = self.env['ir.attachment'].sudo()
+        for contract in self:
+            filename = contract._get_contract_filename()
+            Attachment.search([('res_model', '=', self._name), ('res_id', '=', contract.id),
+                               ('name', '=', filename)]).unlink()
+            pdf, _report_type = self.env['ir.actions.report'].with_context(
+                force_report_rendering=True)._render_qweb_pdf(
+                'fleet_rental.car_rental_contract_pdf', res_ids=contract.ids)
+            attachment = self.env['ir.attachment'].create({
+                'name': filename,
+                'type': 'binary',
+                'datas': base64.b64encode(pdf),
+                'res_model': self._name,
+                'res_id': contract.id,
+                'mimetype': 'application/pdf',
+            })
+            contract.attachment_ids = [Command.link(attachment.id)]
 
     def action_save_pickup(self):
         self.ensure_one()

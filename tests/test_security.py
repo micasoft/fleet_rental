@@ -16,7 +16,6 @@ class TestSecurity(FleetRentalCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.share_sequence()
         me = cls.user_limited.partner_id
         other = cls.user_manager.partner_id
         Contract = cls.env['car.rental.contract']
@@ -80,14 +79,13 @@ class TestSecurity(FleetRentalCommon):
                 self.as_user(self.user_limited, self.mine).write({name: value})
 
     def test_limited_cannot_write_other_fields(self):
-        """Bug: the Pickup/Dropoff group can write every contract field."""
+        """Pickup/Dropoff users can change only the pick-up and drop-off fields."""
         for name, value in {'rent_cost': 1, 'customer_id': self.driver.id, 'state': 'done'}.items():
             with self.subTest(field=name), self.assertRaises(AccessError):
                 self.as_user(self.user_limited, self.mine).write({name: value})
 
     def test_limited_cannot_run_actions(self):
-        """Passes today only indirectly: these actions touch reservations or
-        invoices, which the Pickup/Dropoff group has no rights on."""
+        """Business actions are for rental users, not Pickup/Dropoff users."""
         for action in ('action_confirm', 'action_verify', 'action_cancel', 'action_invoice_create'):
             with self.subTest(action=action), self.assertRaises(AccessError):
                 getattr(self.as_user(self.user_limited, self.mine), action)()
@@ -111,7 +109,7 @@ class TestSecurity(FleetRentalCommon):
             [('reserved_obj_id', 'in', (self.vehicle | self.vehicle2).ids)]))
 
     def test_normal_and_limited_cannot_delete(self):
-        """Bug: the unlink override never checks delete rights (soft-deletes for anyone)."""
+        """Only users with delete rights (Administrator) may (soft-)delete a contract."""
         for user in (self.user_normal, self.user_limited):
             with self.subTest(user=user.login), self.assertRaises(AccessError):
                 self.as_user(user, self.mine).unlink()
@@ -119,7 +117,7 @@ class TestSecurity(FleetRentalCommon):
     # -- stored XSS -----------------------------------------------------------
 
     def test_tool_name_escaped(self):
-        """Bug: tool names are rendered unescaped in list_line_tools (stored XSS)."""
+        """Tool names are escaped in the Accessories/Tools list (no stored XSS)."""
         tool = self.env['car.rental.tools'].create({'name': '<img src=x onerror=alert(1)>', 'price': 1})
         self.mine.line_tools = [Command.create({'name': tool.id, 'price': 1})]
         html = str(self.mine.list_line_tools)
