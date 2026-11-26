@@ -43,10 +43,7 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
         cls.tool_once = Tools.create({'name': 'Child seat', 'unit': 'once', 'price': 10})
         cls.tool_daily = Tools.create({'name': 'GPS', 'unit': 'daily', 'price': 5})
 
-        cls.service_product = cls.env['product.product'].create({
-            'name': 'Rental service', 'type': 'service', 'taxes_id': [Command.clear()],
-            'property_account_income_id': cls.company_data['default_account_revenue'].id,
-        })
+        cls.service_product = cls._create_aligned_service_product()
         cls.sales_journal = cls.company_data['default_journal_sale']
 
         params = cls.env['ir.config_parameter'].sudo()
@@ -62,6 +59,36 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
         cls.user_limited = user('rental_limited', 'base.group_user,fleet_rental.fleet_car_rental_group_limited')
         cls.user_normal = user('rental_normal', 'fleet_rental.fleet_car_rental_group_user')
         cls.user_manager = user('rental_manager', 'fleet_rental.fleet_car_rental_group_manager')
+
+    @classmethod
+    def _create_aligned_service_product(cls):
+        """A service product whose product.product id equals its template id.
+
+        The addon stores a template id in fleet_rental_service_product_id but
+        searches product.product by it (pinned by
+        TestInvoicing.test_service_product_param_is_template). Aligning the ids
+        keeps that bug from making every other invoicing test depend on which
+        product happens to have that id."""
+        Template = cls.env['product.template']
+        vals = {'name': 'Rental service', 'type': 'service', 'taxes_id': [Command.clear()],
+                'property_account_income_id': cls.company_data['default_account_revenue'].id}
+        product = cls.env['product.product'].create(vals)
+        gap = product.id - product.product_tmpl_id.id
+        if gap == 0:
+            return product
+        product.product_tmpl_id.unlink()
+        attribute = cls.env['product.attribute'].create({
+            'name': 'Filler', 'create_variant': 'dynamic' if gap > 0 else 'always',
+            'value_ids': [Command.create({'name': 'A'}), Command.create({'name': 'B'})]})
+        line = {'attribute_line_ids': [Command.create({
+            'attribute_id': attribute.id, 'value_ids': [Command.set(attribute.value_ids.ids)]})]}
+        for i in range(abs(gap)):
+            # dynamic: a template without variants (template id +1)
+            # always: one template with two variants (variant id +1 relative)
+            Template.create({'name': 'Filler %d' % i, **line})
+        product = cls.env['product.product'].create(vals)
+        assert product.id == product.product_tmpl_id.id, (product.id, product.product_tmpl_id.id)
+        return product
 
     @classmethod
     def share_sequence(cls):
