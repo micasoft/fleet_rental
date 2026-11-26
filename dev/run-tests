@@ -35,10 +35,11 @@ else
 fi
 echo ">> $([ "$mode" = -u ] && echo updating || echo installing) fleet_rental, tests: $TAGS" >&2
 
-rc=0
+set +e   # keep going on failure: the summary and CHECK still run
 "${TC[@]}" run --rm -T odoo "$mode" fleet_rental --test-enable --test-tags "$TAGS" \
-    --stop-after-init --workers 0 --max-cron-threads 0 --log-level test 2>&1 | tee "$log" || rc=$?
-[ "$rc" -ne 0 ] || rc=${PIPESTATUS[0]}
+    --stop-after-init --workers 0 --max-cron-threads 0 --log-level test 2>&1 | tee "$log"
+rc=${PIPESTATUS[0]}   # Odoo's exit code, not tee's
+set -e
 
 summary=$(grep -o 'odoo.tests.result: .*' "$log" | tail -1 | sed 's/odoo.tests.result: //') || true
 echo ">> ${summary:-no test result (install or import failed?)}" >&2
