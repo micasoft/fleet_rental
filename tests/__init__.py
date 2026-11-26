@@ -5,3 +5,5 @@ from . import test_lifecycle
 from . import test_invoicing
 from . import test_calendar
 from . import test_partner_odometer
+from . import test_security
+from . import test_report
