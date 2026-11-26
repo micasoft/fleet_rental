@@ -33,11 +33,14 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
             'rental_cost': [
                 Command.create({'day_from': 1, 'day_to': 3, 'cost_per_day': 50}),
                 Command.create({'day_from': 4, 'day_to': 10, 'cost_per_day': 40}),
+                Command.create({'day_from': 11, 'day_to': 400, 'cost_per_day': 30}),
             ],
         })
         cls.vehicle2 = cls.env['fleet.vehicle'].create({
             'model_id': model.id, 'owner': cls.owner.id, 'license_plate': 'AA-00-02',
-            'company_id': cls.company.id})
+            'company_id': cls.company.id,
+            'rental_cost': [Command.create({'day_from': 1, 'day_to': 400, 'cost_per_day': 60})]})
+        cls.model = model
 
         Tools = cls.env['car.rental.tools']
         cls.tool_once = Tools.create({'name': 'Child seat', 'unit': 'once', 'price': 10})

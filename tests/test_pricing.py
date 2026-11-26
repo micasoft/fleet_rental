@@ -10,6 +10,18 @@ from .common import FleetRentalCommon
 @tagged('post_install', '-at_install', 'fleet_rental')
 class TestPricing(FleetRentalCommon):
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        Vehicle = cls.env['fleet.vehicle']
+        common = {'model_id': cls.model.id, 'owner': cls.owner.id, 'company_id': cls.company.id}
+        # bands 1-3 and 4-10 only: nothing covers 11+ days
+        cls.priced = Vehicle.create(dict(common, license_plate='AA-00-03', rental_cost=[
+            Command.create({'day_from': 1, 'day_to': 3, 'cost_per_day': 50}),
+            Command.create({'day_from': 4, 'day_to': 10, 'cost_per_day': 40}),
+        ]))
+        cls.unpriced = Vehicle.create(dict(common, license_plate='AA-00-04'))
+
     def contract_form(self, start, end, vehicle=None):
         form = Form(self.env['car.rental.contract'], view='fleet_rental.car_rental_contract_form')
         form.customer_id = self.customer
@@ -45,12 +57,8 @@ class TestPricing(FleetRentalCommon):
             form.rent_end_date = datetime(2026, 3, 4, 10, 0)
 
     def test_days_without_tolerance_param(self):
-        """Bug: missing fleet_rental_tolerance_delay counts 0 hours, not 3.
-
-        The parameter only exists once Settings are saved; on a fresh install
-        int(False) gives no tolerance at all instead of the default 3 hours.
-        The test restores the install-time state, so shipping the default as
-        data also fixes it."""
+        """Without the setting (fresh install, Settings never saved) the
+        tolerance is the default 3 hours, not 0."""
         self.restore_installed_param('fleet_rental_tolerance_delay')
         form = self.contract_form('2026-03-02 10:00', '2026-03-03 12:00')
         self.assertEqual(form.contract_days, 1)
@@ -68,7 +76,7 @@ class TestPricing(FleetRentalCommon):
         self.assertEqual(form.rent_cost, 200)
 
     def test_cost_per_day_no_range(self):
-        form = self.contract_form('2026-03-02 10:00', '2026-03-05 10:00', vehicle=self.vehicle2)
+        form = self.contract_form('2026-03-02 10:00', '2026-03-05 10:00', vehicle=self.unpriced)
         self.assertEqual(form.car_cost_per_day, 0)
         self.assertEqual(form.rent_cost, 0)
 
@@ -87,7 +95,7 @@ class TestPricing(FleetRentalCommon):
     # -- cost ranges --------------------------------------------------------
 
     def add_range(self, day_from, day_to):
-        self.vehicle.write({'rental_cost': [
+        self.priced.write({'rental_cost': [
             Command.create({'day_from': day_from, 'day_to': day_to, 'cost_per_day': 30})]})
 
     def test_range_overlap_rejected(self):
@@ -96,9 +104,44 @@ class TestPricing(FleetRentalCommon):
 
     def test_range_inverted_rejected(self):
         with self.assertRaises(UserError):
-            self.add_range(6, 5)
+            self.add_range(12, 11)  # overlaps nothing: only the order is wrong
+
+    def test_range_from_below_one_rejected(self):
+        with self.assertRaises(UserError):
+            self.add_range(-2, 0)
+
+    def test_range_error_names_the_band(self):
+        with self.assertRaisesRegex(UserError, '12.11'):
+            self.add_range(12, 11)
 
     def test_range_single_day_allowed(self):
-        """Bug: a one-day range (day_from == day_to) is refused."""
         self.add_range(11, 11)
-        self.assertIn((11, 11), [(r.day_from, r.day_to) for r in self.vehicle.rental_cost])
+        self.assertIn((11, 11), [(r.day_from, r.day_to) for r in self.priced.rental_cost])
+
+    # -- a price band must cover the rental -------------------------------
+
+    def priced_contract(self, vehicle, end):
+        return self.make_contract(vehicle_id=vehicle.id, rent_start_date='2026-03-02 10:00:00',
+                                  rent_end_date=end)
+
+    def test_confirm_covered_length(self):
+        contract = self.priced_contract(self.priced, '2026-03-12 10:00:00')  # 10 days
+        contract.action_confirm()
+        self.assertEqual(contract.state, 'reserved')
+
+    def test_confirm_longer_than_last_band_refused(self):
+        contract = self.priced_contract(self.priced, '2026-03-13 10:00:00')  # 11 days
+        with self.assertRaisesRegex(UserError, '11 days'):
+            contract.action_confirm()
+        self.assertEqual(contract.state, 'draft')
+
+    def test_confirm_in_gap_between_bands_refused(self):
+        self.priced.rental_cost.filtered(lambda r: r.day_from == 4).day_from = 5  # gap: day 4
+        contract = self.priced_contract(self.priced, '2026-03-06 10:00:00')  # 4 days
+        with self.assertRaisesRegex(UserError, '4 days'):
+            contract.action_confirm()
+
+    def test_confirm_vehicle_without_bands_refused(self):
+        contract = self.priced_contract(self.unpriced, '2026-03-05 10:00:00')
+        with self.assertRaises(UserError):
+            contract.action_confirm()

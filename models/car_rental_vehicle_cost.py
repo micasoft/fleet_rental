@@ -20,7 +20,7 @@
 #############################################################################
 import logging
 
-from odoo import models, fields, api
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 class CarRentalVehicleCost(models.Model):
@@ -45,17 +45,18 @@ class CarRentalVehicleCost(models.Model):
 
     @api.constrains('day_from', 'day_to')
     def total_updater(self):
-        valid = True
-        values = []
-        for r in self.vehicle_id.rental_cost:
-            self._logger.info(f"{r.day_from} >= {r.day_to}")
-            if r.day_from >= r.day_to:
-                valid = False
-            for v in values:
-                self._logger.error(f"{v[0]} <= {r.day_to} and {v[1]} >= {r.day_from}")
-                if v[0] <= r.day_to and v[1] >= r.day_from:
-                    valid = False
-            values.append((r.day_from, r.day_to))
-        if not valid:
-            raise UserError(
-                    'Something wrong with the range interval, please make sure the values are correct!')
+        """Each band starts at day 1 or later, ends on or after its start
+        (a one-day band is fine) and overlaps no other band of the vehicle."""
+        for vehicle in self.vehicle_id:
+            seen = self.browse()
+            for band in vehicle.rental_cost.sorted('day_from'):
+                label = f"{band.day_from}-{band.day_to}"
+                if band.day_from < 1:
+                    raise UserError(_("Price band %s: 'From day' must be 1 or more.", label))
+                if band.day_from > band.day_to:
+                    raise UserError(_("Price band %s: 'From day' is after 'To day'.", label))
+                for other in seen:
+                    if other.day_from <= band.day_to and other.day_to >= band.day_from:
+                        raise UserError(_("Price band %(band)s overlaps band %(other)s.",
+                                          band=label, other=f"{other.day_from}-{other.day_to}"))
+                seen |= band

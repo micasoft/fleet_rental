@@ -20,6 +20,9 @@
 #############################################################################
 from odoo import fields, models
 
+# Hours a customer may return late before another day is charged.
+DEFAULT_TOLERANCE_DELAY = 3
+
 
 class ResConfigSettings(models.TransientModel):
     """Inherit configuration settings"""
@@ -49,7 +52,7 @@ class ResConfigSettings(models.TransientModel):
     
     fleet_rental_tolerance_delay = fields.Integer (
         string="Tolerance delay",
-        default=3,
+        default=DEFAULT_TOLERANCE_DELAY,
         config_parameter='fleet_rental_tolerance_delay',
         help="The tolerance delay before count another day!")
 

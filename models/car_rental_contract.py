@@ -26,6 +26,8 @@ from odoo import api, fields, models, _
 from odoo.tools import format_datetime
 from odoo.exceptions import UserError, ValidationError
 
+from .res_config_settings import DEFAULT_TOLERANCE_DELAY
+
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class CarRentalContract(models.Model):
@@ -324,9 +326,27 @@ class CarRentalContract(models.Model):
             self.contract_days = (self.rent_end_date
                                   - self.rent_start_date
                                   - timedelta(
-                                      hours=int(self.env['ir.config_parameter'].sudo().get_param('fleet_rental_tolerance_delay'))
+                                      hours=self._tolerance_delay()
                                     )).days + 1
         self._logger.debug(f"update contract_days: {self.contract_days}")
+
+    def _tolerance_delay(self):
+        """Hours a customer may return late before another day is charged."""
+        value = self.env['ir.config_parameter'].sudo().get_param(
+            'fleet_rental_tolerance_delay', DEFAULT_TOLERANCE_DELAY)
+        return int(value or 0)
+
+    def _check_price_band(self):
+        """Refuse a contract whose length no price band of its vehicle covers
+        (it would be rented for free)."""
+        for contract in self:
+            days = contract.contract_days
+            if not any(band.day_from <= days <= band.day_to
+                       for band in contract.vehicle_id.rental_cost):
+                raise UserError(_(
+                    "No price band covers %(days)s days for vehicle %(vehicle)s. "
+                    "Add one to the vehicle's rental prices.",
+                    days=days, vehicle=contract.vehicle_id.display_name))
 
     @api.onchange('car_cost_per_day', 'contract_days')
     def _update_rent_cost(self):
@@ -626,6 +646,7 @@ class CarRentalContract(models.Model):
            state to "reserved," generate a sequence code, and send a
            confirmation email.
         """
+        self._check_price_band()
         check_availability, _rent_from, _rent_to = self._check_availability()
         if check_availability:
             reserved_id = self.vehicle_id.rental_reserved_time.create(

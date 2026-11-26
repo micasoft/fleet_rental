@@ -1,19 +1,12 @@
 # Known bugs (pinned by failing tests)
 
-`make test` currently reports 40 failing tests out of 91; `make test-check` passes
+`make test` currently reports 38 failing tests out of 97; `make test-check` passes
 when exactly these fail. Each one asserts the
 **correct** behaviour (design: `docs/superpowers/specs/2026-11-26-test-suite-design.md`)
 and carries a `Bug:` docstring. When a bug is fixed, its test turns green;
 remove its row here in the same commit. This list must shrink to zero.
 
 Line numbers refer to the code at the time the list was written (2026-11-26).
-
-## Pricing and duration
-
-| Test | Bug | Where |
-|---|---|---|
-| `TestPricing.test_days_without_tolerance_param` | Without the `fleet_rental_tolerance_delay` setting (fresh install, Settings never saved) the tolerance is 0 hours instead of 3. | `models/car_rental_contract.py:327` |
-| `TestPricing.test_range_single_day_allowed` | A one-day price range (e.g. 11–11) is refused. | `models/car_rental_vehicle_cost.py:52` |
 
 ## Reservation and extension
 
