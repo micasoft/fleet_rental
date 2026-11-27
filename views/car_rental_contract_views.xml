@@ -46,283 +46,338 @@
         <field name="domain_force">[('soft_deleted', '=', False)]</field>
     </record>
 
-<!--    Fleet vehicle form view
-    <record id="fleet_vehicle_view_form" model="ir.ui.view">
-        <field name="name">fleet.vehicle.view.form.inherit.fleet.rental</field>
-        <field name="model">fleet.vehicle</field>
-        <field name="inherit_id" ref="fleet.fleet_vehicle_view_form"/>
-        <field name="arch" type="xml">
-            <field name="car_value" position="after">
-                <field name="rental_reserved_time" invisible="1"/>
-            </field>
-            <field name="color" position="replace">
-                <field name="color"/>
-            </field>
-        </field>
-    </record> -->
-
-
-<!--    Car rental contract form view-->
+    <!-- Contract form: the back office's screen, one highlighted next step per state. -->
     <record id="car_rental_contract_form" model="ir.ui.view">
         <field name="name">car.rental.contract.view.form</field>
         <field name="model">car.rental.contract</field>
-        <field name="type">form</field>
         <field name="arch" type="xml">
-            <form string="car_result">
+            <form string="Rental Contract">
                 <header>
-                    <button name="action_send_quote" string="Send quote" type="object"
-                            invisible="(state != 'draft') or (sent_quote == True)"
-                            class="oe_highlight"/>
                     <button name="action_confirm" string="Reserve" type="object"
-                            invisible="state != 'draft'"
-                            class="oe_highlight"/>
-                    <button name="action_move_to_quote" string="Quotation" type="object"
-                            invisible="state != 'reserved'"
-                            class="oe_highlight"/>
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_send_quote" string="Send Quote" type="object"
+                            class="btn-secondary" invisible="state != 'draft' or sent_quote"/>
+                    <button name="action_run" string="Start the Rental" type="object"
+                            class="btn-primary" invisible="state != 'reserved'"/>
                     <button name="action_generate_contract" string="Generate Contract" type="object"
-                            invisible="state != 'reserved'"
-                            class="oe_highlight"/>
-                    <button name="action_run" string="Sart the renting" type="object"
-                            invisible="state != 'reserved'"
-                            class="oe_highlight"/>
+                            class="btn-secondary" invisible="state != 'reserved'"/>
+                    <button name="action_move_to_quote" string="Back to Quote" type="object"
+                            class="btn-secondary" invisible="state != 'reserved'"/>
+                    <button name="action_invoice_create" string="Create Invoice" type="object"
+                            class="btn-primary"
+                            invisible="state != 'running' or first_invoice_created or first_payment == 0.0 or read_only"/>
+                    <button name="action_confirm_extend_rent" string="Confirm Extension" type="object"
+                            class="btn-primary" invisible="state != 'running' or not read_only"/>
+                    <button name="action_discard_extend" string="Discard Extension" type="object"
+                            class="btn-secondary" invisible="state != 'running' or not read_only"/>
+                    <button name="action_extend_rent" string="Extend" type="object"
+                            class="btn-secondary"
+                            invisible="state != 'running' or read_only or (not first_invoice_created and first_payment &gt; 0.0)"/>
+                    <button name="force_checking" string="Mark as Returned" type="object"
+                            class="btn-secondary"
+                            invisible="state != 'running' or (not first_invoice_created and first_payment &gt; 0.0)"/>
+                    <button name="action_verify" string="Verify and Invoice" type="object"
+                            class="btn-primary" invisible="state != 'checking'"/>
+                    <button name="set_to_done" string="Set to Done" type="object"
+                            class="btn-primary" invisible="state != 'invoice'"/>
                     <button name="action_cancel" string="Cancel" type="object"
-                            invisible="state not in ['draft', 'reserved']"
-                            class="oe_highlight"/>
-                    <button name="action_invoice_create" string="Create Invoice"
-                            invisible="((state != 'running') or (first_invoice_created or first_payment == 0.0) or (read_only == True))"
-                            type="object" class="oe_highlight"/>
-                    <button name="action_extend_rent" string="Extend Rent"
-                            invisible="((state != 'running') or (read_only == True) or (first_invoice_created == False and first_payment > 0.0))"
-                            type="object"
-                            class="oe_highlight"/>
-                    <button name="action_confirm_extend_rent" string="Confirm Extend"
-                            invisible="((state != 'running') or (read_only == False))" type="object"
-                            class="oe_highlight"/>
-                    <button name="action_discard_extend" string="Discard Extend"
-                            invisible="((state != 'running') or (read_only == False))" type="object"
-                            class="oe_highlight"/>
-                    <button name="force_checking" string="Force Checking"
-                            invisible="((state != 'running') or (first_invoice_created == False and first_payment > 0.0))"
-                            type="object" class="oe_highlight"/>
-                    <button name="action_verify" string="Verify/Invoice"
-                            invisible="state != 'checking'"
-                            type="object" class="oe_highlight"/>
-                    <button name="set_to_done" string="Set to Done"
-                            invisible="state not in ['invoice']" type="object" class="oe_highlight"/>
+                            invisible="state not in ('draft', 'reserved')"/>
                     <field name="state" widget="statusbar"
-                           statusbar_visible="draft,running,done"/>
+                           statusbar_visible="draft,reserved,running,checking,invoice,done"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_invoice" class="oe_stat_button" icon="fa-money" type="object">
-                            <div class="o_form_field o_stat_info">
-                                <field string="Invoice" name="invoice_count"
-                                   widget="statinfo"/>
-                            </div>
+                        <button name="action_view_invoice" type="object" class="oe_stat_button"
+                                icon="fa-pencil-square-o" invisible="invoice_count == 0">
+                            <field name="invoice_count" widget="statinfo" string="Invoices"/>
                         </button>
                     </div>
-                    <field name="image" widget='image' class="oe_avatar"/>
+                    <field name="image" widget="image" class="oe_avatar" readonly="1"/>
                     <div class="oe_title">
-                        <h1>
-                            <field name="name"/>
-                        </h1>
+                        <h1><field name="name" readonly="1"/></h1>
                     </div>
-                    <group>
-                        <separator string="Contract Details" colspan="4"/>
-                        <group>
-                            <field name="customer_id"
-                                   domain="[('active','=', True)]"
+                    <field name="sent_quote" invisible="1"/>
+                    <field name="read_only" invisible="1"/>
+                    <field name="first_invoice_created" invisible="1"/>
+                    <field name="journal_type" invisible="1"/>
+                    <field name="company_currency_id" invisible="1"/>
+                    <group name="main">
+                        <group name="customer" string="Customer">
+                            <field name="customer_id" readonly="state != 'draft'"/>
+                            <field name="driver_id" readonly="state not in ('draft', 'reserved')"/>
+                            <field name="driver_extra_id" readonly="state not in ('draft', 'reserved')"/>
+                            <field name="sales_person" widget="many2one_avatar"
+                                   readonly="state != 'draft'" domain="[('employee', '=', True)]"/>
+                            <field name="company_id" groups="base.group_multi_company"
                                    readonly="state != 'draft'"/>
-                            <field name="driver_id"
-                                   domain="[('active','=', True)]"
-                                   readonly="state not in ['draft', 'reserved'] "/>
-                            <field name="driver_extra_id"
-                                   domain="[('active','=', True)]"
-                                   readonly="state not in ['draft', 'reserved'] "/>
-                            <field name="sent_quote" invisible="1"/>
-                            <field name="read_only" invisible="1"/>
-                            <field name="rent_start_date"
-                                   readonly="state != 'draft'"/>
-                            <field name="rent_end_date"
-                                   readonly="((state not in ['draft']) and (read_only == False))"/>
-                            <field name="journal_type" invisible="1"/>
-                            <field name="company_id" readonly="state != 'draft'"/>
                         </group>
-                        <group>
-                          <field name="sales_person"
-                                   readonly="state != 'draft'"
-                                   domain="[('employee','=', True)]"/>
-                            <field name="pickup_location"
-                                   readonly="state != 'draft'"/>
-                            <field name="handle_pickup"
-                                   readonly="((state not in ['draft', 'reserved']) and (read_only == False))"
-                                   domain="[('employee','=', True)]"/>
-                            <field name="dropoff_location"
-                                   readonly="((state not in ['draft', 'reserved']) and (read_only == False))"/>
-                            <field name="handle_dropoff"
-                                   readonly="((state not in ['draft', 'reserved', 'running']) and (read_only == False))"
-                                   domain="[('employee','=', True)]"/>
-                            <field name="first_invoice_created" invisible="1"/>
-                            <label for="cost_generated"/>
-                            <div>
-                                <field name="cost_frequency" class="oe_inline"
-                                readonly="(state != 'draft')"/>
-                                <field name="cost_generated" style="width:142px;"
-                                invisible="cost_frequency == 'no'"
-                                readonly="state != 'draft'"
-                                required="cost_frequency not in [None, False , 'no']"/>
-                            </div>
-                            <field name="vehicle_id"
-                                   domain="[('state_id.name','!=','Inactive')]"
-                                   readonly="state != 'draft'"
+                        <group name="booking" string="Booking">
+                            <field name="vehicle_id" readonly="state != 'draft'"
+                                   domain="[('state_id.name', '!=', 'Inactive')]"
                                    options="{'no_create': True}"/>
-                        </group>
-                        <group>
-                            <field name="attachment_ids"
-                                   widget="fleet_rental_attachment_preview"
-                                   class="oe_inline"/>
+                            <field name="rent_start_date" readonly="state != 'draft'"/>
+                            <field name="rent_end_date"
+                                   readonly="state != 'draft' and not read_only"/>
+                            <field name="contract_days"/>
+                            <field name="pickup_location" readonly="state != 'draft'"/>
+                            <field name="handle_pickup" widget="many2one_avatar"
+                                   readonly="state not in ('draft', 'reserved') and not read_only"
+                                   domain="[('employee', '=', True)]"/>
+                            <field name="dropoff_location"
+                                   readonly="state not in ('draft', 'reserved') and not read_only"/>
+                            <field name="handle_dropoff" widget="many2one_avatar"
+                                   readonly="state not in ('draft', 'reserved', 'running') and not read_only"
+                                   domain="[('employee', '=', True)]"/>
                         </group>
                     </group>
                     <notebook>
-                        <page string="Vehicle contract" invisible="cost_frequency not in [None,False,'no']">
+                        <page string="Pricing" name="pricing">
                             <group>
-                                <field name="car_description"/>
-                                <field name="car_deposit" readonly="state not in ['draft', 'reserved']"/>
-                                <field name="car_km_included_per_day" readonly="state not in ['draft', 'reserved']"/>
-                                <field name="car_km_extra" readonly="state not in ['draft', 'reserved']"/>
-                                <field name="contract_days" />
-                                <field name="car_cost_per_day" readonly="state not in ['draft', 'reserved', 'running', 'checking']" />
-                                <field name="rent_cost"/>
-                                <label for="first_payment"/>
-                                <div>
-                                    <field name="first_payment" class="oe_inline" readonly="((state not in ['draft', 'running']))"/>
-                                    <field name="first_payment_inv" style="width:142px;" readonly="1"/>
-                                </div>
+                                <group name="price" string="Price">
+                                    <label for="cost_frequency"/>
+                                    <div class="o_row">
+                                        <field name="cost_frequency" readonly="state != 'draft'"/>
+                                        <field name="cost_generated" invisible="cost_frequency in (False, 'no')"
+                                               readonly="state != 'draft'"
+                                               required="cost_frequency not in (False, 'no')"/>
+                                    </div>
+                                    <field name="car_cost_per_day" invisible="cost_frequency not in (False, 'no')"
+                                           readonly="state not in ('draft', 'reserved', 'running', 'checking')"/>
+                                    <field name="rent_cost" invisible="cost_frequency not in (False, 'no')"/>
+                                    <label for="first_payment" invisible="cost_frequency not in (False, 'no')"/>
+                                    <div class="o_row" invisible="cost_frequency not in (False, 'no')">
+                                        <field name="first_payment" readonly="state not in ('draft', 'running')"/>
+                                        <field name="first_payment_inv" readonly="1"/>
+                                    </div>
+                                </group>
+                                <group name="vehicle_terms" string="Vehicle Terms">
+                                    <field name="car_description"/>
+                                    <field name="car_deposit" readonly="state not in ('draft', 'reserved')"/>
+                                    <field name="car_km_included_per_day" readonly="state not in ('draft', 'reserved')"/>
+                                    <field name="car_km_extra" readonly="state not in ('draft', 'reserved')"/>
+                                </group>
                             </group>
                         </page>
-                        <page string="Recurring Invoices"
-                              invisible="cost_frequency in [None,False,'no']">
+                        <page string="Recurring Invoices" name="recurring"
+                              invisible="cost_frequency in (False, 'no')">
                             <field name="recurring_line" mode="list">
-                                <list string="Fleet Reccurring Lines"
-                                      colors="#0b7a35:payment_info=='paid';#f20b07:payment_info!='paid'">
+                                <list decoration-success="payment_info == 'posted'"
+                                      decoration-muted="payment_info == 'draft'"
+                                      decoration-danger="payment_info not in ('posted', 'draft')">
                                     <field name="date_today"/>
                                     <field name="date_due"/>
                                     <field name="name"/>
-                                    <field name="account_info"/>
-                                    <field name="recurring_amount"/>
+                                    <field name="account_info" optional="hide"/>
+                                    <field name="recurring_amount" sum="Total"/>
                                     <field name="payment_info"/>
                                     <field name="invoice_ref"/>
                                 </list>
                             </field>
                         </page>
-                        <page string="Accessories/Tools">
-                            <group>
-
-                                <group>
-                                    <field name="damage_cost"
-                                           invisible="state != 'checking'"/>
-                                </group>
-                            </group>
-                            <field name="line_tools" readonly="(state == 'invoice') or (state == 'done') or (state == 'cancel')">
-                                <list string="Fleet Checklist Lines"
-                                      editable="bottom">
+                        <page string="Accessories" name="accessories">
+                            <field name="line_tools" readonly="state in ('invoice', 'done', 'cancel')">
+                                <list editable="bottom">
                                     <field name="name"/>
                                     <field name="quantity"/>
-                                    <field name="unit" readonly="True"/>
+                                    <field name="unit" readonly="1"/>
                                     <field name="price"/>
                                 </list>
                                 <form>
-                                    <sheet>
-                                        <group>
-                                            <field name="name"/>
-                                        </group>
-                                    </sheet>
+                                    <group>
+                                        <field name="name"/>
+                                    </group>
                                 </form>
                             </field>
-
+                            <group invisible="state != 'checking'">
+                                <field name="damage_cost"/>
+                            </group>
+                        </page>
+                        <page string="Pickup &amp; Drop-off" name="handover"
+                              invisible="state in ('draft', 'cancel')">
+                            <group>
+                                <group name="pickup" string="Pickup">
+                                    <field name="rent_pickup_date" readonly="1"/>
+                                    <label for="meters_pickup_value"/>
+                                    <div class="o_row">
+                                        <field name="meters_pickup_value" readonly="1"/>
+                                        <field name="meters_pickup_unit" readonly="1" nolabel="1"/>
+                                    </div>
+                                    <field name="fuel_tunk_pickup" widget="progressbar" readonly="1"
+                                           options="{'max_value': 100}"/>
+                                    <field name="attachment_pickup_ids" readonly="1"
+                                           widget="fleet_rental_attachment_preview"/>
+                                    <field name="signature_pickup" widget="signature" readonly="1"/>
+                                </group>
+                                <group name="dropoff" string="Drop-off">
+                                    <field name="rent_dropoff_date" readonly="1"/>
+                                    <label for="meters_dropoff_value"/>
+                                    <div class="o_row">
+                                        <field name="meters_dropoff_value" readonly="1"/>
+                                        <field name="meters_dropoff_unit" readonly="1" nolabel="1"/>
+                                    </div>
+                                    <field name="fuel_tunk_dropoff" widget="progressbar" readonly="1"
+                                           options="{'max_value': 100}"/>
+                                    <field name="attachment_dropoff_ids" readonly="1"
+                                           widget="fleet_rental_attachment_preview"/>
+                                    <field name="signature_dropoff" widget="signature" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Documents" name="documents">
+                            <field name="attachment_ids" widget="fleet_rental_attachment_preview"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Anything the team should know about this rental…"/>
                         </page>
                     </notebook>
-                    <div>
-                        <group class="oe_subtotal_footer oe_right">
-                            <field name="tools_cost"/>
-                            <field name="total_cost"
-                                   class="oe_subtotal_footer_separator"/>
-                        </group>
-                    </div>
-                    <group>
-                        <field name="notes"/>
+                    <group name="totals" class="oe_subtotal_footer">
+                        <field name="tools_cost" widget="monetary"
+                               options="{'currency_field': 'company_currency_id'}"/>
+                        <field name="total_cost" widget="monetary" class="oe_subtotal_footer_separator"
+                               options="{'currency_field': 'company_currency_id'}"/>
                     </group>
                 </sheet>
-                <!-- Chatter -->
                 <chatter/>
             </form>
         </field>
     </record>
-<!--    Car rental contract list view-->
+
     <record id="car_rental_contract_list" model="ir.ui.view">
         <field name="name">car.rental.contract.view.list</field>
         <field name="model">car.rental.contract</field>
-        <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="car_contract_result"
-                decoration-info="state == 'draft'"
-                decoration-warning="state == 'running'"
-                decoration-danger="state == 'cancel'"
-                decoration-success="state == 'done'"
-
-                default_order="rent_start_date desc">
+            <list string="Rental Contracts" default_order="rent_start_date desc"
+                  decoration-muted="state == 'cancel'">
+                <field name="company_currency_id" column_invisible="1"/>
                 <field name="name"/>
-                <field name="customer_id" string="Customer"/>
+                <field name="customer_id"/>
+                <field name="driver_id" optional="hide"/>
                 <field name="vehicle_id"/>
                 <field name="rent_start_date"/>
                 <field name="rent_end_date"/>
-                <field name="state"/>
-                <field name="total_cost" groups="fleet_rental.fleet_car_rental_group_user"/>
+                <field name="pickup_location" optional="hide"/>
+                <field name="dropoff_location" optional="hide"/>
+                <field name="sales_person" widget="many2one_avatar" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="total_cost" widget="monetary" sum="Total"
+                       options="{'currency_field': 'company_currency_id'}"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-primary="state == 'reserved'"
+                       decoration-warning="state in ('running', 'checking')"
+                       decoration-success="state in ('invoice', 'done')"/>
             </list>
         </field>
     </record>
-<!--    Car rental contract calendar view-->
+
+    <record id="car_rental_contract_kanban" model="ir.ui.view">
+        <field name="name">car.rental.contract.view.kanban</field>
+        <field name="model">car.rental.contract</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" quick_create="0" records_draggable="0"
+                    group_create="0" group_delete="0" group_edit="0" sample="1">
+                <field name="company_currency_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex align-items-center gap-2">
+                            <field name="image" widget="image" options="{'size': [40, 40]}"/>
+                            <div class="flex-grow-1 text-truncate">
+                                <field name="vehicle_id" class="fw-bold"/>
+                                <field name="customer_id" class="d-block"/>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-1">
+                            <field name="rent_start_date" widget="date"/> →
+                            <field name="rent_end_date" widget="date"/>
+                        </div>
+                        <footer>
+                            <field name="name" class="text-muted small"/>
+                            <div class="d-flex ms-auto align-items-center gap-2">
+                                <field name="total_cost" widget="monetary" class="fw-bold"
+                                       options="{'currency_field': 'company_currency_id'}"/>
+                                <field name="sales_person" widget="many2one_avatar"/>
+                            </div>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
     <record id="car_rental_contract_calendar" model="ir.ui.view">
         <field name="name">car.rental.contract.calendar</field>
         <field name="model">car.rental.contract</field>
         <field name="arch" type="xml">
-            <calendar string="Car Rental Reserved" mode="week" date_start="rent_start_date" date_stop="rent_end_date" color="state" event_limit="5" quick_create="0" create="1" delete="0">
-                <field name="vehicle_id"/>
+            <calendar string="Rentals" mode="month" date_start="rent_start_date" date_stop="rent_end_date"
+                      color="vehicle_id" event_limit="5" quick_create="0" delete="0">
+                <field name="vehicle_id" filters="1"/>
                 <field name="customer_id"/>
                 <field name="pickup_location"/>
                 <field name="dropoff_location"/>
-                <field name="total_cost" widget="monetary"/>
                 <field name="state" filters="1"/>
             </calendar>
         </field>
     </record>
 
-
     <record id="car_rental_contract_search" model="ir.ui.view">
         <field name="name">car.rental.contract.search</field>
         <field name="model">car.rental.contract</field>
         <field name="arch" type="xml">
-            <search>
-                <filter string="In Progress"
-                        name="car_rental_in_progress_filter"
-                        domain="[('state', 'not in', ['cancel', 'done'])]"
-                        />
+            <search string="Rental Contracts">
+                <field name="name"/>
+                <field name="customer_id"/>
+                <field name="driver_id"/>
+                <field name="vehicle_id"/>
+                <field name="sales_person"/>
+                <filter name="filter_mine" string="My Contracts"
+                        domain="[('sales_person.user_ids', 'in', [uid])]"/>
+                <separator/>
+                <filter name="filter_quote" string="Quotes" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_reserved" string="Reserved" domain="[('state', '=', 'reserved')]"/>
+                <filter name="filter_running" string="Running" domain="[('state', '=', 'running')]"/>
+                <filter name="filter_to_check" string="To Check" domain="[('state', '=', 'checking')]"/>
+                <filter name="filter_to_invoice" string="To Invoice" domain="[('state', '=', 'invoice')]"/>
+                <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+                <filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+                <separator/>
+                <filter name="car_rental_in_progress_filter" string="In Progress"
+                        domain="[('state', 'not in', ['cancel', 'done'])]"/>
+                <separator/>
+                <filter name="filter_start_today" string="Starting Today"
+                        domain="[('rent_start_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('rent_start_date', '&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="filter_return_today" string="Returning Today"
+                        domain="[('rent_end_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('rent_end_date', '&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="filter_start_date" string="Start Date" date="rent_start_date"/>
+                <group>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+                    <filter name="group_customer" string="Customer" context="{'group_by': 'customer_id'}"/>
+                    <filter name="group_sales_person" string="Salesperson" context="{'group_by': 'sales_person'}"/>
+                    <filter name="group_start_month" string="Start Month" context="{'group_by': 'rent_start_date:month'}"/>
+                </group>
             </search>
         </field>
     </record>
 
-<!--    Action rental contract-->
     <record id="action_car_rental_contract" model="ir.actions.act_window">
-        <field name="name">Rental Contract</field>
+        <field name="name">Rental Contracts</field>
         <field name="res_model">car.rental.contract</field>
-        <field name="view_mode">list,calendar,form</field>
+        <field name="view_mode">list,kanban,calendar,form</field>
         <field name="context">{'search_default_car_rental_in_progress_filter': 1}</field>
-        <field name="view_ids" eval="[(5, 0, 0),
-        (0, 0, {'view_mode': 'list', 'view_id': ref('car_rental_contract_list')}),
-        (0, 0, {'view_mode': 'calendar', 'view_id': ref('car_rental_contract_calendar')}),
-        (0, 0, {'view_mode': 'form', 'view_id': ref('car_rental_contract_form')})]"/>
-        <!-- Restrict to specific group -->
-        <field name="groups_id" eval="[(6, 0, [ref('fleet_rental.fleet_car_rental_group_user')])]"/>
+        <field name="view_ids" eval="[Command.clear(),
+            Command.create({'view_mode': 'list', 'view_id': ref('car_rental_contract_list')}),
+            Command.create({'view_mode': 'kanban', 'view_id': ref('car_rental_contract_kanban')}),
+            Command.create({'view_mode': 'calendar', 'view_id': ref('car_rental_contract_calendar')}),
+            Command.create({'view_mode': 'form', 'view_id': ref('car_rental_contract_form')})]"/>
+        <field name="search_view_id" ref="car_rental_contract_search"/>
+        <field name="groups_id" eval="[Command.set([ref('fleet_rental.fleet_car_rental_group_user')])]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first rental quote</p>
+            <p>Pick a vehicle and the dates: the price comes from the vehicle's rates.
+               Reserve it, hand it over, invoice it.</p>
+        </field>
     </record>
 
     <menuitem name="Fleet Rental" id="fleet.menu_root" sequence="30"
@@ -331,6 +386,6 @@
     <menuitem id="menu_car_parent" sequence="1" name="Rental Management"
               groups="fleet_rental.fleet_car_rental_group_limited" parent="fleet.menu_root"/>
     <menuitem id="menu_car_rental_contract" parent="menu_car_parent"
-              name="Car Rental Contract(s)" groups="fleet_rental.fleet_car_rental_group_user"
+              name="Contracts" groups="fleet_rental.fleet_car_rental_group_user"
               action="action_car_rental_contract" sequence="1"/>
 </odoo>

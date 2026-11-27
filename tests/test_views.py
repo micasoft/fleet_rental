@@ -69,3 +69,44 @@ class TestViews(FleetRentalCommon):
         self.assertNotIn(tomorrow, pickups)
         returns = Contract.search(self.filter_domain(DROPOFF_SEARCH, 'dropoff_today'))
         self.assertNotIn(today, returns)
+
+    # -- back office (desktop) ---------------------------------------------------
+
+    def test_contract_action_views_load(self):
+        action, result = self.action_views('fleet_rental.action_car_rental_contract', self.user_normal)
+        for view_type in ('list', 'kanban', 'calendar', 'form', 'search'):
+            self.assertIn(view_type, result['views'])
+
+    def test_contract_form_opens(self):
+        with Form(self.contract.with_user(self.user_normal),
+                  view='fleet_rental.car_rental_contract_form') as form:
+            form.notes = 'Customer asked for a baby seat'
+        self.assertEqual(self.contract.notes, 'Customer asked for a baby seat')
+
+    def test_contract_form_creates(self):
+        with Form(self.env['car.rental.contract'].with_user(self.user_normal),
+                  view='fleet_rental.car_rental_contract_form') as form:
+            form.customer_id = self.customer
+            form.driver_id = self.driver
+            form.vehicle_id = self.vehicle2
+            form.rent_start_date = fields.Datetime.to_datetime('2026-05-02 10:00:00')
+            form.rent_end_date = fields.Datetime.to_datetime('2026-05-04 10:00:00')
+            form.pickup_location = 'Porto'
+            form.dropoff_location = 'Porto'
+        self.assertEqual(form.record.rent_cost, 120)
+
+    def test_contract_search_filters(self):
+        search = 'fleet_rental.car_rental_contract_search'
+        draft = self.make_contract(vehicle_id=self.vehicle2.id)
+        Contract = self.env['car.rental.contract']
+        self.assertIn(draft, Contract.search(self.filter_domain(search, 'filter_quote')))
+        reserved = Contract.search(self.filter_domain(search, 'filter_reserved'))
+        self.assertIn(self.contract, reserved)
+        self.assertNotIn(draft, reserved)
+        self.contract.action_run()
+        self.assertIn(self.contract, Contract.search(self.filter_domain(search, 'filter_running')))
+        self.contract.force_checking()
+        self.assertIn(self.contract, Contract.search(self.filter_domain(search, 'filter_to_check')))
+        mine = Contract.with_user(self.user_normal).search(
+            self.filter_domain(search, 'filter_mine', self.user_normal))
+        self.assertNotIn(self.contract, mine)
