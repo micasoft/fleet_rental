@@ -1,18 +1,17 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-<!--    Car tools form view-->
+    <!-- Accessories (child seats, GPS…) offered with a rental -->
     <record id="car_tools_view_form" model="ir.ui.view">
         <field name="name">car.rental.tools.view.form</field>
         <field name="model">car.rental.tools</field>
-        <field name="type">form</field>
         <field name="arch" type="xml">
-            <form string="Accessories/Tools">
+            <form string="Accessory">
                 <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Child seat"/></h1>
+                    </div>
                     <group>
-                        <group>
-                            <field name="name"/>
-                        </group>
-
                         <group>
                             <field name="unit"/>
                             <field name="price"/>
@@ -22,27 +21,30 @@
             </form>
         </field>
     </record>
-<!--    Car tools list view-->
+
     <record id="car_tools_view_list" model="ir.ui.view">
         <field name="name">car.rental.tools.view.list</field>
         <field name="model">car.rental.tools</field>
-        <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Accessories/Tools">
+            <list string="Accessories" editable="bottom">
                 <field name="name"/>
-                <field name="unit" />
+                <field name="unit"/>
                 <field name="price"/>
             </list>
         </field>
     </record>
-<!--    Action for car tools-->
+
     <record id="action_fleet_car_tools" model="ir.actions.act_window">
-        <field name="name">Accessories/Tools</field>
+        <field name="name">Accessories</field>
         <field name="res_model">car.rental.tools</field>
         <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an accessory</p>
+            <p>Child seats, GPS, snow chains… charged once or per day on the contracts.</p>
+        </field>
     </record>
 
-    <menuitem id="menu_car_tools" parent="menu_car_parent" name="Accessories/Tools"
+    <menuitem id="menu_car_tools" parent="menu_car_parent" name="Accessories"
               groups="fleet_rental.fleet_car_rental_group_user"
               action="action_fleet_car_tools" sequence="4"/>
 </odoo>

@@ -110,3 +110,26 @@ class TestViews(FleetRentalCommon):
         mine = Contract.with_user(self.user_normal).search(
             self.filter_domain(search, 'filter_mine', self.user_normal))
         self.assertNotIn(self.contract, mine)
+
+    # -- other screens -----------------------------------------------------------
+
+    def test_settings_form_loads(self):
+        Form(self.env['res.config.settings'])
+        arch = self.env['res.config.settings'].get_views([(False, 'form')])['views']['form']['arch']
+        self.assertIn('<app ', arch)
+        self.assertIn('name="fleet_rental"', arch)
+
+    def test_partner_vehicle_tools_forms_open(self):
+        with Form(self.driver) as form:
+            form.license = 'P-123456'
+        self.assertEqual(self.driver.license, 'P-123456')
+        with Form(self.vehicle) as form:
+            form.deposit = 500
+        with Form(self.tool_once.with_user(self.user_normal)) as form:
+            form.price = 12
+
+    def test_analysis_action_has_graph(self):
+        action = self.env.ref('fleet_rental.action_fleet_rental_analysis')
+        self.assertEqual(action.view_mode.split(',')[0], 'graph')
+        self.env['report.fleet.rental'].with_user(self.user_normal).get_views(
+            [(False, 'graph'), (False, 'pivot')])

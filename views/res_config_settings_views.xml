@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- Fleet settings form view inherited and added Default Fleet Rental Service Product  -->
+    <!-- Settings ▸ Rental Management -->
     <record id="res_config_settings_view_form" model="ir.ui.view">
         <field name="name">res.config.settings.view.form.inherit.fleet.rental</field>
         <field name="model">res.config.settings</field>
@@ -8,41 +8,35 @@
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <div class="app_settings_block" data-string="Rental Management"
-                id="fleet_rental" string="Rental Management"
-                data-key="fleet_rental">
-                    <h2>Rental Management</h2>
-                    <div class="row mt16 o_settings_container">
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane" />
-                            <div class="o_setting_right_pane">
-                                <span class="o_form_label">Default Fleet Rental Service Product</span>
-                                <div class="text-muted content-group mt16">
-                                    <label for="fleet_rental_service_product_id" class="col-lg-4 o_light_label"/>
-                                    <field name="fleet_rental_service_product_id" class="oe_inline"/>
-                                </div>
-                                <span class="o_form_label">E-mail settings</span>
-                                <div class="text-muted content-group mt16">
-                                    <label for="fleet_rental_send_booking" class="col-lg-4 o_light_label"/>
-                                    <field name="fleet_rental_send_booking" class="oe_inline"/>
-                                </div>
-                                <div class="text-muted content-group mt16">
-                                    <label for="fleet_rental_send_recurring_reminder" class="col-lg-4 o_light_label"/>
-                                    <field name="fleet_rental_send_recurring_reminder" class="oe_inline"/>
-                                </div>    
-                                <span class="o_form_label">Other settings</span>
-                                <div class="text-muted content-group mt16">
-                                    <label for="fleet_rental_tolerance_delay" class="col-lg-4 o_light_label"/>
-                                    <field name="fleet_rental_tolerance_delay" class="oe_inline"/>
-                                </div>
-                                <div class="text-muted content-group mt16">
-                                    <label for="fleet_rental_calendar_sync" class="col-lg-4 o_light_label"/>
-                                    <field name="fleet_rental_calendar_sync" class="oe_inline"/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <app data-string="Rental Management" string="Rental Management" name="fleet_rental"
+                     groups="fleet_rental.fleet_car_rental_group_manager">
+                    <block title="Invoicing" name="fleet_rental_invoicing">
+                        <setting id="fleet_rental_service_product" string="Rental service product"
+                                 help="Product used on the lines of the rental invoices.">
+                            <field name="fleet_rental_service_product_id" class="w-75"/>
+                        </setting>
+                    </block>
+                    <block title="E-mails" name="fleet_rental_emails">
+                        <setting id="fleet_rental_send_booking"
+                                 help="E-mail the customer when a booking is reserved.">
+                            <field name="fleet_rental_send_booking"/>
+                        </setting>
+                        <setting id="fleet_rental_send_recurring_reminder"
+                                 help="E-mail the customer a reminder for each recurring invoice.">
+                            <field name="fleet_rental_send_recurring_reminder"/>
+                        </setting>
+                    </block>
+                    <block title="Operations" name="fleet_rental_operations">
+                        <setting id="fleet_rental_tolerance_delay" string="Tolerance delay"
+                                 help="Hours a return can be late before an extra day is charged.">
+                            <field name="fleet_rental_tolerance_delay" class="o_light_label"/> hours
+                        </setting>
+                        <setting id="fleet_rental_calendar_sync"
+                                 help="Put pickups and drop-offs in the Calendar of the people who handle them.">
+                            <field name="fleet_rental_calendar_sync"/>
+                        </setting>
+                    </block>
+                </app>
             </xpath>
         </field>
     </record>

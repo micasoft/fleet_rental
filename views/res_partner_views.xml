@@ -1,65 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!--    Inherited view for Partner-->
+    <!-- Contact form: identity papers and driving licence of individuals, and
+         the rental flags, in their own page. -->
     <record id="view_partner_form" model="ir.ui.view">
         <field name="name">view.partner.form.inherit.fleet.rental</field>
         <field name="model">res.partner</field>
-        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='vat']/.." position="after">
-                <span class="o_form_label o_td_label">
-                    <label for="person_id" invisible="is_company"/>
-                </span>
-                <div style="width: 100%;">
-                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
-                        <field name="person_id" invisible="is_company" widget="char" placeholder="ID/Passport" class="o_address_city"/>
-                    </div>
-                    <div style="width: 49%; display:inline-block;">
-                        <field name="person_id_issuer" invisible="is_company" widget="char" placeholder="Issued by" class="o_address_state"/>
-                    </div>
-                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
-                        <field name="person_id_date" invisible="is_company" widget="date" placeholder="Expires" class="o_address_zip"/>
-                    </div>
-                    <div style="width: 49%; display:inline-block;">
-                        <field name="person_id_until" invisible="is_company" widget="date" placeholder="Expires" class="o_address_zip"/>
-                    </div>
-                </div>
-
-                <span class="o_form_label o_td_label">
-                    <label for="date_of_birth" invisible="is_company"/>
-                </span>
-
-                <div style="width: 100%;">
-                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
-                        <field name="date_of_birth" invisible="is_company" widget="date" placeholder="Date of birth" />
-                    </div>
-                    <div style="width: 49%; display:inline-block;">
-                        <field name="birthplace" invisible="is_company" widget="char" placeholder="Birthplace" />
-                    </div>
-                </div>
-
-                <span class="o_form_label o_td_label">
-                    <label for="license" invisible="is_company"/>
-                </span>
-
-                <div style="width: 100%;">
-                    <div style="width: 49%; display:inline-block;margin-right: 2%;">
-                        <field name="license" invisible="is_company" widget="char" placeholder="License"/>
-                    </div>
-                    <div style="width: 49%;display:inline-block;">
-                        <field name="license_issuer" invisible="is_company" widget="char" placeholder="Issued by"/>
-                    </div>
-                    <div style="width: 49%;display:inline-block;margin-right: 2%;">
-                        <field name="license_date" invisible="is_company" widget="date" placeholder="From"/>
-                    </div>
-                    <div style="width: 49%;display:inline-block;">
-                        <field name="license_until" invisible="is_company" widget="date" placeholder="Until"/>
-                    </div>
-                </div>
-            </xpath>
             <xpath expr="//page[@name='internal_notes']" position="after">
-                <page name="fleet_car_rental" string="Car Rental Management">
-                    <group string="Car Rental Settings" name="car_rental" priority="1" >
+                <page name="fleet_car_rental" string="Rental">
+                    <group invisible="is_company">
+                        <group name="identity" string="Identity">
+                            <field name="person_id" placeholder="ID card or passport number"/>
+                            <field name="person_id_issuer"/>
+                            <field name="person_id_date"/>
+                            <field name="person_id_until"/>
+                            <field name="date_of_birth"/>
+                            <field name="birthplace"/>
+                        </group>
+                        <group name="driving_licence" string="Driving Licence">
+                            <field name="license" placeholder="Licence number"/>
+                            <field name="license_issuer"/>
+                            <field name="license_date"/>
+                            <field name="license_until"/>
+                        </group>
+                    </group>
+                    <group name="car_rental" string="Rental Settings">
                         <field name="employee" invisible="is_company"/>
                         <field name="is_agency" invisible="not is_company"/>
                     </group>
