@@ -1,0 +1,38 @@
+#!/bin/bash
+# `make release [BUMP=patch|minor|major] [SKIP_TESTS=1]`: cut a release on master.
+#
+# The first release (no v18.0.* tag yet) is the manifest's version as it is;
+# later ones bump it (patch by default). Runs `make test-check`, writes the
+# version into __manifest__.py, commits "Release 18.0.x.y.z" and tags v18.0.x.y.z.
+# Pushes nothing: pushing the tag makes GitHub build and publish the zip.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+BUMP="${BUMP:-patch}"
+BRANCH="${RELEASE_BRANCH:-master}"
+die() { echo "release: $*" >&2; exit 1; }
+
+[ "$(git branch --show-current)" = "$BRANCH" ] || die "releases are cut on $BRANCH (RELEASE_BRANCH=... to override)"
+[ -z "$(git status --porcelain --untracked-files=no)" ] || die "commit or stash your changes first"
+
+last=$(git tag -l 'v18.0.*' --sort=-v:refname | head -1)
+current=$(dev/version)
+if [ -z "$last" ]; then
+    new=$current                                # first release: as the manifest says
+else
+    new=$(dev/version next "$BUMP" "${last#v}")
+fi
+[ -z "$(git tag -l "v$new")" ] || die "tag v$new already exists"
+echo ">> release $new (last: ${last:-none})" >&2
+
+if [ -z "${SKIP_TESTS:-}" ]; then
+    CHECK=1 dev/run-tests >&2 || die "tests failed: nothing was released"
+fi
+
+if [ "$new" != "$current" ]; then
+    dev/version set "$new"
+    git add __manifest__.py
+fi
+git commit --allow-empty -q -m "Release $new"
+git tag -a "v$new" -m "Release $new"
+echo ">> tagged v$new. Publish it with: git push origin $BRANCH v$new" >&2

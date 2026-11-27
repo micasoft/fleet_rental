@@ -5,7 +5,7 @@ MODULE  := fleet_rental
 SERVER_ID = docker ps -q --filter label=com.docker.compose.project=fleet_rental_dev \
 	--filter label=com.docker.compose.service=odoo --filter label=com.docker.compose.oneoff=False
 
-.PHONY: help check-env psql-check up down logs init update shell restore restore-filestore test test-check
+.PHONY: help check-env psql-check up down logs init update shell restore restore-filestore test test-check version package release
 
 help:
 	@echo "check-env   verify .env and .secrets/pg_password exist"
@@ -20,6 +20,9 @@ help:
 	@echo "restore-filestore  FILE=backup-folder|manifest.txt|odoo-data.tar.gz [SOURCE_DB=name]"
 	@echo "test        run the tests on a throwaway database [TAGS=/fleet_rental:TestX] [KEEP=1]"
 	@echo "test-check  like test, but passes only if the failures are exactly the known bugs (Bug: tests)"
+	@echo "version     print the module version (__manifest__.py)"
+	@echo "package     build dist/$(MODULE)-<version>.zip from committed code [REF=HEAD]"
+	@echo "release     on master: test, bump, commit and tag v<version> [BUMP=patch|minor|major] [SKIP_TESTS=1]"
 
 check-env:
 	@test -f .env || { echo "missing .env: copy .env.example to .env and fill it in" >&2; exit 1; }
@@ -62,3 +65,13 @@ test:
 
 test-check:
 	@TAGS='$(TAGS)' KEEP='$(KEEP)' CHECK=1 ./dev/run-tests
+
+# Releases (README.rst "Releases"). Nothing is pushed.
+version:
+	@./dev/version
+
+package:
+	@REF='$(or $(REF),HEAD)' ./dev/package
+
+release:
+	@BUMP='$(or $(BUMP),patch)' SKIP_TESTS='$(SKIP_TESTS)' ./dev/release

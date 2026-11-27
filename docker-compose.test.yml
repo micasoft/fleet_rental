@@ -29,7 +29,7 @@ services:
         condition: service_healthy
     secrets: [pg_password]
     volumes:
-      - .:/mnt/extra-addons/fleet_rental:ro
+      - ${FLEET_RENTAL_TEST_SRC:-.}:/mnt/extra-addons/fleet_rental:ro
       - ./dev/odoo.conf:/etc/odoo/odoo.conf:ro
       - ./dev/entrypoint.sh:/dev-entrypoint.sh:ro
       - odoo_test_data:/var/lib/odoo

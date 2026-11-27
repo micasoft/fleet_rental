@@ -1,0 +1,21 @@
+#!/bin/bash
+# `make package [REF=HEAD]`: build dist/fleet_rental-<version>.zip from a commit,
+# <version> being the manifest's (18.0.x.y.z).
+#
+# The zip holds one fleet_rental/ folder, the layout Odoo expects in an
+# addons path. Dev-only files are left out (export-ignore in .gitattributes).
+# Only committed files go in: uncommitted changes are not packaged.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+REF="${REF:-HEAD}"
+version=$(git show "$REF:__manifest__.py" | python3 -c '
+import ast, sys
+print(ast.literal_eval(sys.stdin.read())["version"])')
+out="dist/fleet_rental-$version.zip"
+
+mkdir -p dist
+git archive --format=zip --prefix=fleet_rental/ -o "$out" "$REF"
+[ "$REF" != HEAD ] || [ -z "$(git status --porcelain --untracked-files=no)" ] \
+    || echo ">> warning: uncommitted changes are not in the zip" >&2
+echo "$out"

@@ -61,6 +61,9 @@ Commands
 ``make restore``              ``FILE=dump.sql.gz``: replace ``PG_DATABASE`` with the dump
 ``make restore-filestore``    ``FILE=folder|manifest.txt|tar.gz``: replace the dev filestore
 ``make test``                 run the tests on a throwaway database (see below)
+``make version``              print the module version
+``make package``              build the module zip (see Releases)
+``make release``              cut a release on ``master`` (see Releases)
 ============================  ================================================================
 
 Restoring a backup
@@ -136,6 +139,34 @@ Ctrl-C. A full run takes a few minutes.
 The tests describe how the addon **should** behave, and all of them pass.
 A test whose docstring starts with ``Bug:`` pins a known bug: it fails on
 purpose until the bug is fixed, and is listed in ``tests/KNOWN_BUGS.md``.
+
+Releases
+--------
+The version in ``__manifest__.py`` is the release: the git tag is
+``v<version>`` and the zip ``fleet_rental-<version>.zip``. It follows
+Odoo's convention ``18.0.x.y.z``: the Odoo series, then *major* (breaking
+changes that need a migration), *minor* (compatible features) and *patch*
+(fixes). The first release is ``18.0.2.0.0``. A new Odoo version is a new
+branch, not a bump.
+
+- ``make release`` (on ``master``, no uncommitted changes) runs
+  ``make test-check``, bumps the version (``BUMP=patch`` by default, or
+  ``minor``/``major``), commits ``Release <version>`` and tags it. The first
+  release, with no tag yet, keeps the manifest's version. Nothing is
+  pushed: ``git push origin master v<version>`` publishes it.
+- ``make package`` builds ``dist/fleet_rental-<version>.zip`` from ``HEAD``
+  (or ``REF=v18.0.2.0.0``): one ``fleet_rental/`` folder, without the dev
+  tooling (``.gitattributes``). Only committed code goes in.
+
+GitHub Actions (``.github/workflows/ci.yml``) run on every push and pull
+request to ``master``: they build the zip, run the test suite on its
+unzipped contents and keep it as a workflow artifact. A pushed tag must
+match the manifest version, and its zip is attached to a GitHub release.
+
+To install the zip, unzip it into a folder of the server's addons path,
+then *Apps > Update Apps List* and install or upgrade *Fleet Rental
+Management*. *Apps > Import Module* does not work for this addon: it
+loads only data files (XML, CSV, static assets), not Python models.
 
 Options (``.env``)
 ------------------

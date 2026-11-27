@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""fleet_rental's version: the one in __manifest__.py, used as is for the
+release, the git tag (v18.0.x.y.z) and the zip.
+
+Versions follow Odoo's convention, 18.0.x.y.z: the Odoo series (18.0), then
+x (major) for breaking changes that need a migration, y (minor) for
+compatible features and z (patch) for fixes. A new Odoo version is a new
+branch, not a bump.
+
+    dev/version                             print the version
+    dev/version next major|minor|patch [V]  print the version after V (default: current)
+    dev/version set V                       write V into __manifest__.py
+"""
+import ast
+import pathlib
+import re
+import sys
+
+SERIES = '18.0'
+MANIFEST = pathlib.Path(__file__).resolve().parent.parent / '__manifest__.py'
+VERSION_RE = re.compile(rf'^{re.escape(SERIES)}\.(\d+)\.(\d+)\.(\d+)$')
+VERSION_LINE = re.compile(r"""^(\s*['"]version['"]\s*:\s*)(['"])([^'"]*)\2""", re.M)
+
+
+def fail(msg):
+    sys.exit(f'dev/version: {msg}')
+
+
+def parse(version):
+    match = VERSION_RE.match(version)
+    if not match:
+        fail(f'{version!r} is not a version: expected {SERIES}.x.y.z, e.g. {SERIES}.2.0.0')
+    return int(match[1]), int(match[2]), int(match[3])
+
+
+def current():
+    version = ast.literal_eval(MANIFEST.read_text())['version']
+    parse(version)
+    return version
+
+
+def next_version(bump, version):
+    major, minor, patch = parse(version)
+    if bump == 'patch':
+        return f'{SERIES}.{major}.{minor}.{patch + 1}'
+    if bump == 'minor':
+        return f'{SERIES}.{major}.{minor + 1}.0'
+    if bump == 'major':
+        return f'{SERIES}.{major + 1}.0.0'
+    fail(f'BUMP must be major, minor or patch, not {bump!r} (a new Odoo version is a new branch)')
+
+
+def set_version(version):
+    parse(version)
+    text, count = VERSION_LINE.subn(rf'\g<1>\g<2>{version}\g<2>', MANIFEST.read_text())
+    if count != 1:
+        fail(f"expected one 'version' line in {MANIFEST.name}, found {count}")
+    MANIFEST.write_text(text)
+
+
+def main(args):
+    if not args:
+        print(current())
+    elif args[0] == 'next' and len(args) in (2, 3):
+        print(next_version(args[1], args[2] if len(args) == 3 else current()))
+    elif args[0] == 'set' and len(args) == 2:
+        set_version(args[1])
+    else:
+        fail(__doc__)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
