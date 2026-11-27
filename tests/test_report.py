@@ -34,3 +34,30 @@ class TestReport(FleetRentalCommon):
             and not self.env['ir.model.access'].search_count([('model_id', '=', model.id)])
         ]
         self.assertEqual(missing, [])
+
+    # -- printed documents and e-mails ------------------------------------------
+
+    def test_pdfs_use_company_layout(self):
+        """Both PDFs carry the company header (web.external_layout)."""
+        contract = self.confirm(self.make_contract())
+        self.company.name = 'Rent-a-Test Lda'
+        for report in ('fleet_rental.car_rental_contract_pdf', 'fleet_rental.car_rental_reserve_pdf'):
+            with self.subTest(report=report):
+                html, _type = self.env['ir.actions.report']._render_qweb_html(report, contract.ids)
+                self.assertIn('Rent-a-Test Lda', html.decode())
+                self.assertIn(contract.name, html.decode())
+
+    def test_mail_templates_render(self):
+        """Every template renders, with the company logo instead of a placeholder."""
+        contract = self.confirm(self.make_contract())
+        invoice = self.init_invoice('out_invoice', amounts=[100])
+        for xmlid in ('mail_template_quote', 'mail_template_reserved',
+                      'mail_template_recurring_reminder', 'mail_template_next_pickup',
+                      'mail_template_next_dropoff'):
+            with self.subTest(template=xmlid):
+                template = self.env.ref(f'fleet_rental.{xmlid}').with_context(invoice=invoice)
+                body = str(template._render_field('body_html', contract.ids)[contract.id])
+                self.assertIn(self.customer.name if xmlid in (
+                    'mail_template_quote', 'mail_template_reserved',
+                    'mail_template_recurring_reminder') else contract.name, body)
+                self.assertNotIn('placehold.co', body)

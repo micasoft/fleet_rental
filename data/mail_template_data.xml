@@ -1,251 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+<!-- noupdate: databases keep their own (possibly edited) copies on update. -->
 <data noupdate="1">
     <record id="mail_template_quote" model="mail.template">
         <field name="name">Car Rental: Quote</field>
-        <field name="description">Sent to customers a quote related to the reservation</field>
-        <field name="model_id"
-            ref="fleet_rental.model_car_rental_contract" />
+        <field name="description">Sent to the customer with the quote of a booking</field>
+        <field name="model_id" ref="fleet_rental.model_car_rental_contract"/>
         <field name="lang">{{ object.customer_id.lang }}</field>
         <field name="partner_to">{{ object.customer_id.id }}</field>
         <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
-        <field name="subject">Renting quote for {{object.car_description}}</field>
+        <field name="subject">Rental quote for {{ object.car_description or object.vehicle_id.name }}</field>
         <field name="body_html" type="html">
-<table border="0" cellpadding="0" cellspacing="0" style="padding-top: 16px; background-color: #FFFFFF; font-family:Verdana, Arial,sans-serif; color: #454748; width: 100%; border-collapse:separate;">
-<tr><td align="center">
-    <table border="0" cellpadding="0" cellspacing="0" width="590" style="padding: 16px; background-color: #FFFFFF; color: #454748; border-collapse:separate;">
-    <tbody>
-    <!-- HEADER -->
-    <tr>
-        <td align="center" style="min-width: 590px;">
-            <table border="0" cellpadding="0" cellspacing="0" width="590" style="min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;">
-                <tr><td valign="middle" align="right" t-if="not object.company_id.uses_default_logo">
-                    <img t-attf-src="https://placehold.co/150x30" style="padding: 0px; margin: 0px;" t-att-alt="object.company_id.name"/>
-                </td></tr>
-                <tr><td tyle="text-align:center;">
-                    <hr width="100%" style="background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin: 16px 0px 16px 0px;"/>
-                </td></tr>
-            </table>
-        </td>
-    </tr>
-    <!-- CONTENT -->
-    <tr>
-        <td align="center" style="min-width: 590px;">
-            <table border="0" cellpadding="0" cellspacing="0" width="590" style="min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;">
-                <tr><td valign="top" style="font-size: 13px;">
-                    <div>
-                        Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
-                        <br /><br />
-
-
-                        <p>Thanks for contacting us!</p><br />
-                        <p>We hope that the proposal meets your needs</p>
-                        <p>If this is not what you are looking for, please contact us to see the best option as we have many others options !!</p>
-                        <p><b>Details below:</b> <br />
-                        Pick up: <t t-out="object.rent_start_date or ''">01-01-2024</t>, <t t-out="object.pickup_location or ''">Airport Lisbon </t><br />
-                        Return: <t t-out="object.rent_end_date or ''">31-01-2024</t>, <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br />
-                        Vehicle: <t t-out="object.car_description or ''">Mercedez-Benz CLS</t><br />
-                        Estimated cost: <t t-out="object.total_cost or ''">5 000.00</t><br />
-                        Franchise/Deposit: <t t-out="object.vehicle_id.deposit or ''">0.00</t><br />
-                        Point of Contact: <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
-                        <br />
-                        If you wish to book, we will need you to send us a copy of your driving license, passport and residence address
-                        <br /><br />
-                        Regards<br />
-                        <t t-out="object.sales_person.name or ''">--<br />Mitchell Admin</t>
-                    </div>
-                </td></tr>
-                <tr><td style="text-align:center;">
-                  <hr width="100%" style="background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin: 16px 0px 16px 0px;" />
-                </td></tr>
-            </table>
-        </td>
-    </tr>
-    </tbody>
-</table>
-</td>
-</tr>
-</table>
+<div style="margin: 0px; padding: 0px; font-size: 13px;">
+    <p>Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,</p>
+    <p>Thank you for contacting us! Here is our proposal:</p>
+        <ul>
+            <li>Pick-up: <t t-out="object.rent_start_date_locale or ''">01/03/2026 10:00</t>, <t t-out="object.pickup_location or ''">Lisbon Airport</t></li>
+            <li>Return: <t t-out="object.rent_end_date_locale or ''">05/03/2026 10:00</t>, <t t-out="object.dropoff_location or ''">Hotel Yeatman</t></li>
+            <li>Vehicle: <t t-out="object.car_description or object.vehicle_id.name or ''">Mercedes-Benz CLS</t></li>
+            <li>Estimated cost: <t t-out="format_amount(object.total_cost, object.company_currency_id)">€ 5,000.00</t></li>
+            <li>Deposit: <t t-out="format_amount(object.car_deposit, object.company_currency_id)">€ 1,000.00</t></li>
+            <li>Your contact: <t t-out="object.sales_person.name or ''">Mitchell Admin</t><t t-if="object.sales_person.phone">, <t t-out="object.sales_person.phone">+351 999 999 999</t></t></li>
+        </ul>
+    <p>To book, just reply with a copy of your driving licence, your ID card or passport, and your address.</p>
+    <p>If this is not quite what you are looking for, tell us: we have other options.</p>
+        <p>Best regards,<br/>
+            <t t-out="object.sales_person.name or object.company_id.name or ''">Mitchell Admin</t></p>
+</div>
         </field>
     </record>
 
     <record id="mail_template_reserved" model="mail.template">
         <field name="name">Car Rental: Reservation</field>
-        <field name="description">Sent to customers reservation</field>
-        <field name="model_id"
-            ref="fleet_rental.model_car_rental_contract" />
+        <field name="description">Sent to the customer when a booking is reserved</field>
+        <field name="model_id" ref="fleet_rental.model_car_rental_contract"/>
         <field name="lang">{{ object.customer_id.lang }}</field>
-        <field name="subject">Reservation for {{object.car_description}}</field>
         <field name="partner_to">{{ object.customer_id.id }}</field>
+        <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="subject">Reservation {{ object.name }} for {{ object.car_description or object.vehicle_id.name }}</field>
         <field name="body_html" type="html">
-<table border="0" cellpadding="0" cellspacing="0" style="padding-top: 16px; background-color: #FFFFFF; font-family:Verdana, Arial,sans-serif; color: #454748; width: 100%; border-collapse:separate;">
-<tr><td align="center">
-    <table border="0" cellpadding="0" cellspacing="0" width="590" style="padding: 16px; background-color: #FFFFFF; color: #454748; border-collapse:separate;">
-    <tbody>
-    <!-- HEADER -->
-    <tr>
-        <td align="center" style="min-width: 590px;">
-            <table border="0" cellpadding="0" cellspacing="0" width="590" style="min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;">
-                <tr><td valign="middle" align="right" t-if="not object.company_id.uses_default_logo">
-                    <img t-attf-src="https://placehold.co/150x30" style="padding: 0px; margin: 0px;" t-att-alt="object.company_id.name" />
-                </td></tr>
-                <tr><td tyle="text-align:center;">
-                    <hr width="100%" style="background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin: 16px 0px 16px 0px;" />
-                </td></tr>
-            </table>
-        </td>
-    </tr>
-    <!-- CONTENT -->
-    <tr>
-        <td align="center" style="min-width: 590px;">
-            <table border="0" cellpadding="0" cellspacing="0" width="590" style="min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;">
-                <tr><td valign="top" style="font-size: 13px;">
-                    <div>
-                        Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
-                        <br /><br />
-                        <p>Thank you for booking with us!</p><br />
-                        <p>To complete the reservation, please send us a copy of your passport, driving license and residence address.</p>
-                        <p>Please pay attention to the amount that will be blocked on pick-up day in the credit card for franchise / deposit  purposes.</p>
-                        <p><b>Details below:</b><br />
-                        Pick up: <t t-out="object.rent_start_date or ''">01-01-2024</t>, <t t-out="object.pickup_location or ''">Airport Lisbon </t><br />
-                        Return: <t t-out="object.rent_end_date or ''">31-01-2024</t>, <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br />
-                        Vehicle: <t t-out="object.car_description or ''">Mercedez-Benz CLS</t><br />
-                        Estimated cost: <t t-out="object.total_cost or ''">5 000.00</t><br />
-                        Franchise/Deposit: <t t-out="object.vehicle_id.deposit or ''">0.00</t><br />
-                        Point of Contact: <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
-                        <br />
-                        Any doubt please contact us!
-                        <br /><br />
-                        Regards<br />
-                        <t t-out="object.sales_person.name or ''">--<br />Mitchell Admin</t>
-                    </div>
-                </td></tr>
-                <tr><td style="text-align:center;">
-                  <hr width="100%" style="background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin: 16px 0px 16px 0px;" />
-                </td></tr>
-            </table>
-        </td>
-    </tr>
-    <!-- FOOTER -->
-    <tr>
-        <td align="center" style="min-width: 590px;">
-            <table border="0" cellpadding="0" cellspacing="0" width="590" style="min-width: 590px; background-color: white; font-size: 11px; padding: 0px 8px 0px 8px; border-collapse:separate;">
-                <tr><td valign="middle" align="left">
-                    <t t-out="object.company_id.name or ''">YourCompany</t>
-                </td></tr>
-                <tr><td valign="middle" align="left" style="opacity: 0.7;">
-                    <t t-out="object.company_id.phone or ''">+1 650-123-4567</t>
-                    <t t-if="object.company_id.email">
-                        | <a t-att-href="'mailto:%s' % object.company_id.email" style="text-decoration:none; color: #454748;" t-out="object.company_id.email or ''">info@yourcompany.com</a>
-                    </t>
-                    <t t-if="object.company_id.website">
-                        | <a t-att-href="'%s' % object.company_id.website" style="text-decoration:none; color: #454748;" t-out="object.company_id.website or ''">http://www.example.com</a>
-                    </t>
-                </td></tr>
-            </table>
-        </td>
-    </tr>
-    </tbody>
-</table>
-</td></tr>
-</table>
+<div style="margin: 0px; padding: 0px; font-size: 13px;">
+    <p>Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,</p>
+    <p>Thank you for booking with us! Your reservation <strong t-out="object.name or ''">RENT/2026/0001</strong> is confirmed:</p>
+        <ul>
+            <li>Pick-up: <t t-out="object.rent_start_date_locale or ''">01/03/2026 10:00</t>, <t t-out="object.pickup_location or ''">Lisbon Airport</t></li>
+            <li>Return: <t t-out="object.rent_end_date_locale or ''">05/03/2026 10:00</t>, <t t-out="object.dropoff_location or ''">Hotel Yeatman</t></li>
+            <li>Vehicle: <t t-out="object.car_description or object.vehicle_id.name or ''">Mercedes-Benz CLS</t></li>
+            <li>Estimated cost: <t t-out="format_amount(object.total_cost, object.company_currency_id)">€ 5,000.00</t></li>
+            <li>Deposit: <t t-out="format_amount(object.car_deposit, object.company_currency_id)">€ 1,000.00</t></li>
+            <li>Your contact: <t t-out="object.sales_person.name or ''">Mitchell Admin</t><t t-if="object.sales_person.phone">, <t t-out="object.sales_person.phone">+351 999 999 999</t></t></li>
+        </ul>
+    <p>To complete it, please send us a copy of your driving licence, your ID card or passport, and your address.</p>
+    <p>On pick-up day, the deposit amount will be blocked on your credit card.</p>
+    <p>Any question? Just reply to this e-mail.</p>
+        <p>Best regards,<br/>
+            <t t-out="object.sales_person.name or object.company_id.name or ''">Mitchell Admin</t></p>
+</div>
         </field>
     </record>
+
     <record id="mail_template_recurring_reminder" model="mail.template">
-        <field name="name">Car Rental: Recurring reminder</field>
-        <field name="description">Sent to customers the recurring reminder</field>
-        <field name="model_id"
-            ref="fleet_rental.model_car_rental_contract" />
-        <field name="subject">Reminder Recurrent Payment!</field>
+        <field name="name">Car Rental: Recurring payment reminder</field>
+        <field name="description">Sent to the customer for each recurring invoice</field>
+        <field name="model_id" ref="fleet_rental.model_car_rental_contract"/>
+        <field name="lang">{{ object.customer_id.lang }}</field>
         <field name="partner_to">{{ object.customer_id.id }}</field>
+        <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="subject">Payment reminder for {{ object.name }}</field>
         <field name="body_html" type="html">
-<div style="margin: 0px; padding: 0px;">
-    <p style="margin: 0px; padding: 0px; font-size: 13px;">
-        <h3>Reminder Recurrent Payment!</h3>
-        Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,
-        <br /><br />
-        <p>his is to remind you that the recurrent payment for the rental contract has to be done.
-            Please make the payment at the earliest.</p>
-        <p><b>Please find the details below:</b><br/>
-        Contract Ref <t t-out="object.name or ''">RENT/2024/0001</t><br/>
-        Amount <t t-out="ctx.get('invoice').amount_total or ''">5 000.00</t><br/>
-        Due Date <t t-out="ctx.get('invoice').invoice_date_due or ''">12/12/2024</t><br/>
-        Responsible Person <t t-out="object.sales_person.name or ''">Mitchell Admin</t>, <t t-out="object.sales_person.phone or ''">+355 993 949 444</t></p>
-        Do not hesitate to contact us if you have any questions.
-        <br /><br />
-        <t t-out="object.sales_person.name or ''">--<br/>Mitchell Admin</t>
-    </p>
+<div style="margin: 0px; padding: 0px; font-size: 13px;">
+    <p>Dear <t t-out="object.customer_id.name or ''">Brandon Freeman</t>,</p>
+    <p>This is a reminder that a payment for your rental contract is due:</p>
+    <ul>
+        <li>Contract: <t t-out="object.name or ''">RENT/2026/0001</t></li>
+        <li>Amount: <t t-out="format_amount(ctx.get('invoice').amount_total, ctx.get('invoice').currency_id) if ctx.get('invoice') else ''">€ 500.00</t></li>
+        <li>Due date: <t t-out="format_date(ctx.get('invoice').invoice_date_due) if ctx.get('invoice') else ''">12/12/2026</t></li>
+        <li>Your contact: <t t-out="object.sales_person.name or ''">Mitchell Admin</t><t t-if="object.sales_person.phone">, <t t-out="object.sales_person.phone">+351 999 999 999</t></t></li>
+    </ul>
+    <p>Do not hesitate to contact us if you have any question.</p>
+        <p>Best regards,<br/>
+            <t t-out="object.sales_person.name or object.company_id.name or ''">Mitchell Admin</t></p>
 </div>
         </field>
     </record>
 
     <record id="mail_template_next_pickup" model="mail.template">
-        <field name="name">Car Rental: Notify nextp pickup(s)</field>
-        <field name="description">Sent to seller the events for the next pickup(s)</field>
-        <field name="model_id"
-            ref="fleet_rental.model_car_rental_contract" />
-        <field name="subject">Next events for {{object.name}}!</field>
-        <field name="email_from">{{ object.company_id.email }}</field>
+        <field name="name">Car Rental: Next pickup</field>
+        <field name="description">Sent the day before to the person handling the pickup</field>
+        <field name="model_id" ref="fleet_rental.model_car_rental_contract"/>
         <field name="partner_to">{{ object.handle_pickup.id }}</field>
+        <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
         <field name="email_cc">{{ object.sales_person.email }}</field>
+        <field name="subject">Pickup tomorrow: {{ object.name }}</field>
         <field name="body_html" type="html">
-<div style="margin: 0px; padding: 0px;">
-    <p style="margin: 0px; padding: 0px; font-size: 13px;">
-        Dear <t t-out="object.sales_person.name or ''">Brandon Freeman</t>,
-        <br /><br />
-        <p>Tomorrow you have some action(s) in this booking</p>
-        <b>Please find the details below:</b><br/>
-        Pick up <t t-out="object.rent_start_date or ''">01-01-2024</t> at <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
-        Drop off <t t-out="object.rent_end_date or ''">31-01-2024</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
-        Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-benz CLS</t><br/>
-        Deposit <t t-out="object.car_deposit or ''">2000</t><br/>
-        <t t-if="len(object.line_tools) > 0">
-        <b>Acessories:</b><br/>
+<div style="margin: 0px; padding: 0px; font-size: 13px;">
+    <p>Hello <t t-out="object.handle_pickup.name or ''">Brandon Freeman</t>,</p>
+    <p>Tomorrow you have a pickup for booking <strong t-out="object.name or ''">RENT/2026/0001</strong>:</p>
+    <ul>
+        <li>Pick-up: <t t-out="object.rent_start_date_locale or ''">01/03/2026 10:00</t> at <t t-out="object.pickup_location or ''">Lisbon Airport</t></li>
+        <li>Drop-off: <t t-out="object.rent_end_date_locale or ''">05/03/2026 10:00</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t></li>
+        <li>Vehicle: <t t-out="object.vehicle_id.name or ''">Mercedes-Benz CLS</t></li>
+        <li>Customer: <t t-out="object.customer_id.name or ''">Brandon Freeman</t></li>
+        <li>Deposit: <t t-out="format_amount(object.car_deposit, object.company_currency_id)">€ 1,000.00</t></li>
+    </ul>
+    <t t-if="object.line_tools">
+        <p><strong>Accessories:</strong></p>
         <ul>
-        <t t-foreach="object.line_tools" t-as="tool">
-            <li><t t-out="tool.name.name"/></li>
-        </t>
+            <li t-foreach="object.line_tools" t-as="tool"><t t-out="tool.name.name">GPS</t></li>
         </ul>
-        </t>
-        Notes <t t-out="object.notes or ''"></t><br/>
-    </p>
+    </t>
+    <p t-if="object.notes"><strong>Notes:</strong> <t t-out="object.notes">Notes</t></p>
 </div>
         </field>
     </record>
 
     <record id="mail_template_next_dropoff" model="mail.template">
-        <field name="name">Car Rental: Notify nextp dropoff(s)</field>
-        <field name="description">Sent to seller the events for the next dropoff(s)</field>
-        <field name="model_id"
-            ref="fleet_rental.model_car_rental_contract" />
-        <field name="subject">Next events for {{object.name}}!</field>
-        <field name="email_from">{{ object.company_id.email }}</field>
+        <field name="name">Car Rental: Next drop-off</field>
+        <field name="description">Sent the day before to the person handling the drop-off</field>
+        <field name="model_id" ref="fleet_rental.model_car_rental_contract"/>
         <field name="partner_to">{{ object.handle_dropoff.id }}</field>
+        <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
         <field name="email_cc">{{ object.sales_person.email }}</field>
+        <field name="subject">Drop-off tomorrow: {{ object.name }}</field>
         <field name="body_html" type="html">
-<div style="margin: 0px; padding: 0px;">
-    <p style="margin: 0px; padding: 0px; font-size: 13px;">
-        Dear <t t-out="object.sales_person.name or ''">Brandon Freeman</t>,
-        <br /><br />
-        <p>Tomorrow you have some action(s) in this booking</p>
-        <b>Please find the details below:</b><br/>
-        Pick up <t t-out="object.rent_start_date or ''">01-01-2024</t> at <t t-out="object.pickup_location or ''">Airport Lisbon</t><br/>
-        Drop off <t t-out="object.rent_end_date or ''">31-01-2024</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t><br/>
-        Vehicle <t t-out="object.vehicle_id.name or ''">Mercedez-benz CLS</t><br/>
-        Deposit <t t-out="object.car_deposit or ''">2000</t><br/>
-        <t t-if="len(object.line_tools) > 0">
-        <b>Acessories:</b><br/>
+<div style="margin: 0px; padding: 0px; font-size: 13px;">
+    <p>Hello <t t-out="object.handle_dropoff.name or ''">Brandon Freeman</t>,</p>
+    <p>Tomorrow you have a drop-off for booking <strong t-out="object.name or ''">RENT/2026/0001</strong>:</p>
+    <ul>
+        <li>Pick-up: <t t-out="object.rent_start_date_locale or ''">01/03/2026 10:00</t> at <t t-out="object.pickup_location or ''">Lisbon Airport</t></li>
+        <li>Drop-off: <t t-out="object.rent_end_date_locale or ''">05/03/2026 10:00</t> at <t t-out="object.dropoff_location or ''">Hotel Yeatman</t></li>
+        <li>Vehicle: <t t-out="object.vehicle_id.name or ''">Mercedes-Benz CLS</t></li>
+        <li>Customer: <t t-out="object.customer_id.name or ''">Brandon Freeman</t></li>
+        <li>Deposit: <t t-out="format_amount(object.car_deposit, object.company_currency_id)">€ 1,000.00</t></li>
+    </ul>
+    <t t-if="object.line_tools">
+        <p><strong>Accessories:</strong></p>
         <ul>
-        <t t-foreach="object.line_tools" t-as="tool">
-            <li><t t-out="tool.name.name"/></li>
-        </t>
+            <li t-foreach="object.line_tools" t-as="tool"><t t-out="tool.name.name">GPS</t></li>
         </ul>
-        </t>
-        Notes <t t-out="object.notes or ''"></t><br/>
-    </p>
+    </t>
+    <p t-if="object.notes"><strong>Notes:</strong> <t t-out="object.notes">Notes</t></p>
 </div>
         </field>
     </record>
-
 </data>
 </odoo>
