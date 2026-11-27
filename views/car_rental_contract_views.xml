@@ -202,8 +202,7 @@
                                         <field name="meters_pickup_value" readonly="1"/>
                                         <field name="meters_pickup_unit" readonly="1" nolabel="1"/>
                                     </div>
-                                    <field name="fuel_tunk_pickup" widget="progressbar" readonly="1"
-                                           options="{'max_value': 100}"/>
+                                    <field name="fuel_tunk_pickup" widget="progressbar" readonly="1"/>
                                     <field name="attachment_pickup_ids" readonly="1"
                                            widget="fleet_rental_attachment_preview"/>
                                     <field name="signature_pickup" widget="signature" readonly="1"/>
@@ -215,8 +214,7 @@
                                         <field name="meters_dropoff_value" readonly="1"/>
                                         <field name="meters_dropoff_unit" readonly="1" nolabel="1"/>
                                     </div>
-                                    <field name="fuel_tunk_dropoff" widget="progressbar" readonly="1"
-                                           options="{'max_value': 100}"/>
+                                    <field name="fuel_tunk_dropoff" widget="progressbar" readonly="1"/>
                                     <field name="attachment_dropoff_ids" readonly="1"
                                            widget="fleet_rental_attachment_preview"/>
                                     <field name="signature_dropoff" widget="signature" readonly="1"/>
