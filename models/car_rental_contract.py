@@ -70,7 +70,9 @@ PICKUP_FIELDS = {
     'rent_pickup_date', 'rent_dropoff_date',
     'fuel_tunk_pickup', 'fuel_tunk_dropoff',
     'meters_pickup_value', 'odometer_pickup_id',
-    'attachment_pickup_ids', 'signature_pickup', 'send_contract',
+    'meters_dropoff_value', 'odometer_dropoff_id',
+    'attachment_pickup_ids', 'attachment_dropoff_ids',
+    'signature_pickup', 'signature_dropoff', 'send_contract',
     'notes',
 }
 
@@ -190,28 +192,40 @@ class CarRentalContract(models.Model):
     calendar_end_date_id = fields.Many2one('calendar.event', copy=False)
     calendar_end_date_hash = fields.Char(string="Calendar end data hash", readonly=True)
 
-    # pick-up and drop-off
-    rent_pickup_date = fields.Datetime(string="Rent Pickup Date and time", required=True,
+    # pick-up and drop-off (recorded by the staff on their phone)
+    rent_pickup_date = fields.Datetime(string="Picked up at", required=True,
                                        default=fields.Datetime.now,
                                        help="Date and time when the car was picked up")
-    fuel_tunk_pickup = fields.Float(string="Fuel tunk pickup", default=0.0)
-    odometer_pickup_id = fields.Many2one('fleet.vehicle.odometer', string="Km(s) pickup",
+    fuel_tunk_pickup = fields.Float(string="Fuel at pickup", default=0.0)
+    odometer_pickup_id = fields.Many2one('fleet.vehicle.odometer', string="Odometer at pickup",
                                          tracking=True)
-    meters_pickup_value = fields.Float(string='Kilometrage pickup',
+    meters_pickup_value = fields.Float(string='Km at pickup',
                                        compute='_compute_meters_pickup_value',
                                        inverse='_inverse_meters_pickup_value')
     meters_pickup_unit = fields.Selection(string="Unit", related='odometer_pickup_id.unit')
     attachment_pickup_ids = fields.Many2many('ir.attachment',
                                              'car_rental_contract_pickup_ir_attachments_rel',
                                              'rental_id', 'attachment_id',
-                                             string="Pickup attachments",
-                                             help="Pictures during the pickup")
-    signature_pickup = fields.Binary("Signature")
+                                             string="Pickup photos",
+                                             help="Pictures taken at the pickup")
+    signature_pickup = fields.Binary("Customer signature (pickup)")
     send_contract = fields.Boolean(string="Send a contract to client", default=False)
-    rent_dropoff_date = fields.Datetime(string="Rent Dropoff Date and time", required=True,
+    rent_dropoff_date = fields.Datetime(string="Dropped off at", required=True,
                                         default=fields.Datetime.now,
                                         help="Date and time when the car was dropped off")
-    fuel_tunk_dropoff = fields.Float(string="Fuel tunk dropoff", default=0.0)
+    fuel_tunk_dropoff = fields.Float(string="Fuel at drop-off", default=0.0)
+    odometer_dropoff_id = fields.Many2one('fleet.vehicle.odometer', string="Odometer at drop-off",
+                                          tracking=True)
+    meters_dropoff_value = fields.Float(string='Km at drop-off',
+                                        compute='_compute_meters_dropoff_value',
+                                        inverse='_inverse_meters_dropoff_value')
+    meters_dropoff_unit = fields.Selection(string="Drop-off unit", related='odometer_dropoff_id.unit')
+    attachment_dropoff_ids = fields.Many2many('ir.attachment',
+                                              'car_rental_contract_dropoff_ir_attachments_rel',
+                                              'rental_id', 'attachment_id',
+                                              string="Drop-off photos",
+                                              help="Pictures taken at the drop-off")
+    signature_dropoff = fields.Binary("Customer signature (drop-off)")
 
     # -- defaults --------------------------------------------------------------
 
@@ -266,17 +280,30 @@ class CarRentalContract(models.Model):
 
     def _inverse_meters_pickup_value(self):
         for contract in self:
-            if contract.odometer_pickup_id:
-                contract.odometer_pickup_id.write({
-                    'value': contract.meters_pickup_value,
-                    'date': fields.Date.context_today(contract),
-                })
-            elif contract.meters_pickup_value:
-                contract.odometer_pickup_id = self.env['fleet.vehicle.odometer'].create({
-                    'vehicle_id': contract.vehicle_id.id,
-                    'value': contract.meters_pickup_value,
-                    'date': fields.Date.context_today(contract),
-                })
+            contract._write_odometer('odometer_pickup_id', contract.meters_pickup_value)
+
+    @api.depends('odometer_dropoff_id.value')
+    def _compute_meters_dropoff_value(self):
+        for contract in self:
+            contract.meters_dropoff_value = contract.odometer_dropoff_id.value
+
+    def _inverse_meters_dropoff_value(self):
+        for contract in self:
+            contract._write_odometer('odometer_dropoff_id', contract.meters_dropoff_value)
+
+    def _write_odometer(self, field, value):
+        """Record a km reading on the contract's odometer entry `field`,
+        creating the entry on the first reading."""
+        self.ensure_one()
+        odometer = self[field]
+        if odometer:
+            odometer.write({'value': value, 'date': fields.Date.context_today(self)})
+        elif value:
+            self[field] = self.env['fleet.vehicle.odometer'].create({
+                'vehicle_id': self.vehicle_id.id,
+                'value': value,
+                'date': fields.Date.context_today(self),
+            })
 
     # -- onchanges (form only) ---------------------------------------------------
 
