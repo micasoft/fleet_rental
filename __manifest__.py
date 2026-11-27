@@ -22,11 +22,12 @@
     'name': 'Fleet Rental Management',
     'version': "18.0.2.0.0",
     'category': "Extra Tools",
-    'summary': """This module will helps you to give the vehicles for Rent.""",
-    'description': """This module is an application for Vehicle Rental System which helps in managing the rental of vehicles like car,van,bike, jeep etc.
-    It manages fleet/vehicle property by extending the basic fleet module of Odoo.
-    Currently fleet module does not have any connection with accounting module.
-    But in this module, we integrate the module with accounting also.""",
+    'summary': "Rent vehicles from your fleet: quotes, bookings, handovers and invoicing",
+    'description': """
+Vehicle rental on top of Odoo Fleet: quotes and reservations priced from each
+vehicle's daily rates, pickups and drop-offs recorded by the staff on their
+phone (km, fuel, photos, signature), and the rental invoiced through Accounting.
+""",
     'author': 'Jorge Carneiro',
     'company': 'micasoft',
     'maintainer': 'micasoft',
