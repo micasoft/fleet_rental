@@ -888,7 +888,3 @@ class CarRentalContract(models.Model):
                 'mimetype': 'application/pdf',
             })
             contract.attachment_ids = [Command.link(attachment.id)]
-
-    def action_save_pickup(self):
-        self.ensure_one()
-        return True

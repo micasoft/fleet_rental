@@ -8,3 +8,4 @@ from . import test_partner_odometer
 from . import test_security
 from . import test_report
 from . import test_pickup_dropoff
+from . import test_views

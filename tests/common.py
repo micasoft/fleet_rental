@@ -1,4 +1,8 @@
-from odoo import Command
+from dateutil.relativedelta import relativedelta
+from lxml import etree
+
+from odoo import Command, fields
+from odoo.tools.safe_eval import datetime, safe_eval
 from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.tests import new_test_user
 
@@ -97,3 +101,17 @@ class FleetRentalCommon(AccountTestInvoicingCommon):
     def confirm(self, contract):
         contract.action_confirm()
         return contract
+
+    def filter_domain(self, view_xmlid, filter_name, user=None):
+        """The domain of search filter `filter_name` in view `view_xmlid`,
+        evaluated the way the web client does for `user` (default: env user)."""
+        arch = etree.fromstring(self.env.ref(view_xmlid).arch)
+        nodes = arch.xpath(f"//filter[@name='{filter_name}']")
+        self.assertTrue(nodes, f"no filter {filter_name} in {view_xmlid}")
+        env = self.env(user=user) if user else self.env
+        return safe_eval(nodes[0].get('domain'), {
+            'uid': env.uid,
+            'context_today': lambda: fields.Date.context_today(env.user),
+            'datetime': datetime,
+            'relativedelta': relativedelta,
+        })

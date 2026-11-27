@@ -43,5 +43,6 @@
     </record>
 
     <menuitem id="menu_car_tools" parent="menu_car_parent" name="Accessories/Tools"
+              groups="fleet_rental.fleet_car_rental_group_user"
               action="action_fleet_car_tools" sequence="4"/>
 </odoo>

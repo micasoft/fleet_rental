@@ -326,10 +326,10 @@
     </record>
 
     <menuitem name="Fleet Rental" id="fleet.menu_root" sequence="30"
-              groups="fleet_rental.fleet_car_rental_group_user"
+              groups="fleet_rental.fleet_car_rental_group_limited"
               web_icon="fleet_rental,static/description/icon.png"/>
     <menuitem id="menu_car_parent" sequence="1" name="Rental Management"
-              groups="fleet_rental.fleet_car_rental_group_user" parent="fleet.menu_root"/>
+              groups="fleet_rental.fleet_car_rental_group_limited" parent="fleet.menu_root"/>
     <menuitem id="menu_car_rental_contract" parent="menu_car_parent"
               name="Car Rental Contract(s)" groups="fleet_rental.fleet_car_rental_group_user"
               action="action_car_rental_contract" sequence="1"/>

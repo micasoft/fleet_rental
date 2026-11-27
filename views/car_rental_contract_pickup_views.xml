@@ -1,108 +1,346 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pickups and drop-offs: the screens the staff use on their phone at the car.
+    Single-column forms, the booking read-only on top, then what they record.
+-->
 <odoo>
 
-    <!--   Car rental contract pickup list view  -->
-    <record id="car_rental_contract_pickup_list" model="ir.ui.view">
-        <field name="name">car.rental.contract.view.list</field>
+    <!-- Pickups ================================================================ -->
+
+    <record id="car_rental_contract_pickup_kanban" model="ir.ui.view">
+        <field name="name">car.rental.contract.pickup.kanban</field>
         <field name="model">car.rental.contract</field>
-        <field name="type">list</field>
+        <field name="priority">20</field>
         <field name="arch" type="xml">
-            <list string="car_contract_result"
-                default_order="rent_start_date desc">
-                <field name="driver_id" string="Driver"/>
-                <field name="vehicle_id"/>
+            <kanban create="0" delete="0" default_order="rent_start_date" class="o_kanban_mobile">
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex align-items-center gap-2">
+                            <field name="image" widget="image" options="{'size': [48, 48]}"/>
+                            <div class="flex-grow-1 text-truncate">
+                                <field name="vehicle_id" class="fw-bold fs-5"/>
+                                <field name="customer_id" class="d-block"/>
+                            </div>
+                            <field name="name" class="text-muted small"/>
+                        </div>
+                        <div class="mt-1">
+                            <i class="fa fa-clock-o me-1" title="Pickup"/>
+                            <field name="rent_start_date"/>
+                        </div>
+                        <div>
+                            <i class="fa fa-map-marker me-1" title="Location"/>
+                            <field name="pickup_location"/>
+                        </div>
+                        <footer>
+                            <field name="handle_pickup" widget="many2one_avatar" class="ms-auto"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="car_rental_contract_pickup_list" model="ir.ui.view">
+        <field name="name">car.rental.contract.pickup.list</field>
+        <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0" default_order="rent_start_date">
                 <field name="rent_start_date"/>
+                <field name="vehicle_id"/>
+                <field name="customer_id"/>
+                <field name="driver_id" optional="hide"/>
+                <field name="pickup_location"/>
+                <field name="handle_pickup" widget="many2one_avatar" optional="show"/>
+                <field name="name" optional="hide"/>
             </list>
         </field>
     </record>
 
-    <!--    Car rental contract calendar view    -->
     <record id="car_rental_contract_pickup_calendar" model="ir.ui.view">
-        <field name="name">car.rental.contract.calendar</field>
+        <field name="name">car.rental.contract.pickup.calendar</field>
         <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
         <field name="arch" type="xml">
-            <calendar string="Car Rental Reserved" mode="week" date_start="rent_start_date" date_stop="rent_end_date" color="state" event_limit="5" quick_create="0" create="1" delete="0">
+            <calendar string="Handovers" mode="week" date_start="rent_start_date"
+                      date_stop="rent_end_date" color="vehicle_id" event_limit="5"
+                      quick_create="0" create="0" delete="0">
                 <field name="vehicle_id"/>
                 <field name="customer_id"/>
                 <field name="pickup_location"/>
                 <field name="dropoff_location"/>
-                <field name="total_cost" widget="monetary"/>
-                <field name="state" filters="1"/>
             </calendar>
         </field>
     </record>
 
-    <!--   Car rental contract pickup Form  -->
+    <record id="car_rental_contract_pickup_search" model="ir.ui.view">
+        <field name="name">car.rental.contract.pickup.search</field>
+        <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <search string="Pickups">
+                <field name="vehicle_id"/>
+                <field name="customer_id"/>
+                <field name="driver_id"/>
+                <field name="name"/>
+                <filter name="pickup_today" string="Today"
+                        domain="[('rent_start_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('rent_start_date', '&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="pickup_tomorrow" string="Tomorrow"
+                        domain="[('rent_start_date', '&gt;=', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d')),
+                                 ('rent_start_date', '&lt;', (context_today() + relativedelta(days=2)).strftime('%Y-%m-%d'))]"/>
+                <filter name="pickup_week" string="Next 7 days"
+                        domain="[('rent_start_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('rent_start_date', '&lt;', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="mine" string="Mine" domain="[('handle_pickup.user_ids', 'in', [uid])]"/>
+                <group>
+                    <filter name="group_day" string="Day" context="{'group_by': 'rent_start_date:day'}"/>
+                    <filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="car_rental_contract_pickup_form" model="ir.ui.view">
         <field name="name">car.rental.contract.pickup.form</field>
         <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
         <field name="arch" type="xml">
-            <form string="My Model (Read Only)" create="false" delete="false">
+            <form string="Pickup" create="0" delete="0" duplicate="0">
                 <header>
-                    <field name="state" widget="statusbar" statusbar_visible="reserved,running,checking" />
+                    <button name="action_complete_pickup" type="object" string="Complete pickup"
+                            class="btn-primary" invisible="state != 'reserved'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="reserved,running"/>
                 </header>
                 <sheet>
-                    <group>
-                         <separator string="Contract Details"/>
-                         <group>
-                            <field name="customer_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
-                            <field name="driver_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
-                            <field name="driver_extra_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
-                            <field name="vehicle_id" readonly="1" options="{'no_create_edit': True, 'no_open': True}"/>
-                        </group>
-                        <group>
-                            <field name="rent_start_date" readonly="1"/>
-                            <field name="pickup_location" readonly="1"/>
-                            <field name="rent_end_date" readonly="1"/>
-                            <field name="dropoff_location" readonly="1"/>
-                        </group>
-
-                        <separator string="Accessories/Tools" />
-                        <field name="list_line_tools" readonly="1" widget="html"/>
-
-                        <separator string="Pickup detail(s)"/>
-                        <group>
-                            <field name="rent_pickup_date" />
-                            <group><field name="meters_pickup_value" options="{'digits': (7,0)}"/></group>
-                            <group><field name="meters_pickup_unit" readonly="1" nolabel="1"/> </group>
-                            <field name="fuel_tunk_pickup" widget="progressbar" options="{'title': 'Fuel', 'max_value': 100.0, 'editable': true }"/>
-                        </group>
-                        <group>
-                            <field name="attachment_pickup_ids"
-                                   widget="fleet_rental_attachment_preview"
-                                   class="oe_inline"/>
-                        </group>
-                        <separator string="Signature"/>
-                        <group>
-                            <field name="signature_pickup" widget="signature" colspan="2"/>
-                        </group>
-                        <group>
-                            <field name="send_contract" colspan="2"/>
-                        </group>
+                    <div class="oe_title">
+                        <h1><field name="vehicle_id" readonly="1" options="{'no_open': True}"/></h1>
+                        <field name="name" readonly="1" class="text-muted"/>
+                    </div>
+                    <group name="booking" string="Booking">
+                        <field name="customer_id" readonly="1" options="{'no_open': True}"/>
+                        <field name="driver_id" readonly="1" options="{'no_open': True}"/>
+                        <field name="driver_extra_id" readonly="1" options="{'no_open': True}"
+                               invisible="not driver_extra_id"/>
+                        <field name="rent_start_date" readonly="1"/>
+                        <field name="pickup_location" readonly="1"/>
+                        <field name="rent_end_date" readonly="1"/>
+                        <field name="dropoff_location" readonly="1"/>
+                        <field name="list_line_tools" readonly="1"/>
                     </group>
-                    <button name="action_save_pickup" type="object" string="Save Progress" class="btn-primary"/>
+                    <group name="pickup" string="Pickup">
+                        <field name="rent_pickup_date"/>
+                        <label for="meters_pickup_value"/>
+                        <div class="o_row">
+                            <field name="meters_pickup_value" options="{'digits': [7, 0]}"/>
+                            <field name="meters_pickup_unit" readonly="1" nolabel="1"/>
+                        </div>
+                        <field name="fuel_tunk_pickup" widget="progressbar"
+                               options="{'max_value': 100, 'editable': true}"/>
+                    </group>
+                    <group name="photos" string="Photos">
+                        <field name="attachment_pickup_ids" nolabel="1" colspan="2"
+                               widget="fleet_rental_attachment_preview"
+                               options="{'accepted_file_extensions': 'image/*'}"/>
+                    </group>
+                    <group name="signature" string="Customer signature">
+                        <field name="signature_pickup" nolabel="1" colspan="2" widget="signature"
+                               options="{'full_name': 'driver_id'}"/>
+                    </group>
+                    <group name="notes" string="Notes">
+                        <field name="notes" nolabel="1" colspan="2"
+                               placeholder="Scratches, missing items, anything to report…"/>
+                    </group>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <!--    Action rental Pickup-->
     <record id="action_car_rental_contract_pickup" model="ir.actions.act_window">
-        <field name="name">Rental Pickup</field>
+        <field name="name">Pickups</field>
         <field name="res_model">car.rental.contract</field>
-        <field name="view_mode">list,calendar,form</field>
-        <field name="view_ids"
-        eval="[(5, 0, 0),
-        (0, 0, {'view_mode': 'list', 'view_id': ref('car_rental_contract_pickup_list')}),
-        (0, 0, {'view_mode': 'calendar', 'view_id': ref('car_rental_contract_pickup_calendar')}),
-        (0, 0, {'view_mode': 'form', 'view_id': ref('car_rental_contract_pickup_form')})]" />
-
-        <field name="domain">[('state','=','reserved')]</field>
-        <!-- Restrict to specific group -->
-        <field name="groups_id" eval="[(6, 0, [ref('fleet_rental.fleet_car_rental_group_limited')])]"/>
+        <field name="view_mode">kanban,list,calendar,form</field>
+        <field name="view_ids" eval="[Command.clear(),
+            Command.create({'view_mode': 'kanban', 'view_id': ref('car_rental_contract_pickup_kanban')}),
+            Command.create({'view_mode': 'list', 'view_id': ref('car_rental_contract_pickup_list')}),
+            Command.create({'view_mode': 'calendar', 'view_id': ref('car_rental_contract_pickup_calendar')}),
+            Command.create({'view_mode': 'form', 'view_id': ref('car_rental_contract_pickup_form')})]"/>
+        <field name="search_view_id" ref="car_rental_contract_pickup_search"/>
+        <field name="domain">[('state', '=', 'reserved')]</field>
+        <field name="context">{'search_default_pickup_today': 1}</field>
+        <field name="groups_id" eval="[Command.set([ref('fleet_rental.fleet_car_rental_group_limited')])]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No pickup here</p>
+            <p>Reserved bookings you hand over appear here. Remove the "Today" filter to see the next ones.</p>
+        </field>
     </record>
 
-    <menuitem id="menu_car_rental_contract_pickup" parent="menu_car_parent"
-            name="Car Rental Pickup(s)" groups="fleet_rental.fleet_car_rental_group_limited"
-            action="action_car_rental_contract_pickup" sequence="2"/>
+    <!-- Drop-offs ============================================================== -->
+
+    <record id="car_rental_contract_dropoff_kanban" model="ir.ui.view">
+        <field name="name">car.rental.contract.dropoff.kanban</field>
+        <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <kanban create="0" delete="0" default_order="rent_end_date" class="o_kanban_mobile">
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex align-items-center gap-2">
+                            <field name="image" widget="image" options="{'size': [48, 48]}"/>
+                            <div class="flex-grow-1 text-truncate">
+                                <field name="vehicle_id" class="fw-bold fs-5"/>
+                                <field name="customer_id" class="d-block"/>
+                            </div>
+                            <field name="name" class="text-muted small"/>
+                        </div>
+                        <div class="mt-1">
+                            <i class="fa fa-clock-o me-1" title="Drop-off"/>
+                            <field name="rent_end_date"/>
+                        </div>
+                        <div>
+                            <i class="fa fa-map-marker me-1" title="Location"/>
+                            <field name="dropoff_location"/>
+                        </div>
+                        <footer>
+                            <field name="handle_dropoff" widget="many2one_avatar" class="ms-auto"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="car_rental_contract_dropoff_list" model="ir.ui.view">
+        <field name="name">car.rental.contract.dropoff.list</field>
+        <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0" default_order="rent_end_date">
+                <field name="rent_end_date"/>
+                <field name="vehicle_id"/>
+                <field name="customer_id"/>
+                <field name="driver_id" optional="hide"/>
+                <field name="dropoff_location"/>
+                <field name="handle_dropoff" widget="many2one_avatar" optional="show"/>
+                <field name="name" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="car_rental_contract_dropoff_search" model="ir.ui.view">
+        <field name="name">car.rental.contract.dropoff.search</field>
+        <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <search string="Drop-offs">
+                <field name="vehicle_id"/>
+                <field name="customer_id"/>
+                <field name="driver_id"/>
+                <field name="name"/>
+                <filter name="dropoff_today" string="Today"
+                        domain="[('rent_end_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('rent_end_date', '&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="dropoff_tomorrow" string="Tomorrow"
+                        domain="[('rent_end_date', '&gt;=', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d')),
+                                 ('rent_end_date', '&lt;', (context_today() + relativedelta(days=2)).strftime('%Y-%m-%d'))]"/>
+                <filter name="dropoff_week" string="Next 7 days"
+                        domain="[('rent_end_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('rent_end_date', '&lt;', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="dropoff_late" string="Late"
+                        domain="[('rent_end_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="mine" string="Mine" domain="[('handle_dropoff.user_ids', 'in', [uid])]"/>
+                <group>
+                    <filter name="group_day" string="Day" context="{'group_by': 'rent_end_date:day'}"/>
+                    <filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="car_rental_contract_dropoff_form" model="ir.ui.view">
+        <field name="name">car.rental.contract.dropoff.form</field>
+        <field name="model">car.rental.contract</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <form string="Drop-off" create="0" delete="0" duplicate="0">
+                <header>
+                    <button name="action_complete_dropoff" type="object" string="Complete drop-off"
+                            class="btn-primary" invisible="state != 'running'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="running,checking"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="vehicle_id" readonly="1" options="{'no_open': True}"/></h1>
+                        <field name="name" readonly="1" class="text-muted"/>
+                    </div>
+                    <group name="booking" string="Booking">
+                        <field name="customer_id" readonly="1" options="{'no_open': True}"/>
+                        <field name="driver_id" readonly="1" options="{'no_open': True}"/>
+                        <field name="rent_end_date" readonly="1"/>
+                        <field name="dropoff_location" readonly="1"/>
+                        <field name="list_line_tools" readonly="1"/>
+                        <label for="meters_pickup_value"/>
+                        <div class="o_row">
+                            <field name="meters_pickup_value" readonly="1"/>
+                            <field name="meters_pickup_unit" readonly="1" nolabel="1"/>
+                        </div>
+                        <field name="fuel_tunk_pickup" widget="progressbar" readonly="1"
+                               options="{'max_value': 100}"/>
+                    </group>
+                    <group name="dropoff" string="Drop-off">
+                        <field name="rent_dropoff_date"/>
+                        <label for="meters_dropoff_value"/>
+                        <div class="o_row">
+                            <field name="meters_dropoff_value" options="{'digits': [7, 0]}"/>
+                            <field name="meters_dropoff_unit" readonly="1" nolabel="1"/>
+                        </div>
+                        <field name="fuel_tunk_dropoff" widget="progressbar"
+                               options="{'max_value': 100, 'editable': true}"/>
+                    </group>
+                    <group name="photos" string="Photos">
+                        <field name="attachment_dropoff_ids" nolabel="1" colspan="2"
+                               widget="fleet_rental_attachment_preview"
+                               options="{'accepted_file_extensions': 'image/*'}"/>
+                    </group>
+                    <group name="signature" string="Customer signature">
+                        <field name="signature_dropoff" nolabel="1" colspan="2" widget="signature"
+                               options="{'full_name': 'driver_id'}"/>
+                    </group>
+                    <group name="notes" string="Notes">
+                        <field name="notes" nolabel="1" colspan="2"
+                               placeholder="Damage, missing items, anything to report…"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_car_rental_contract_dropoff" model="ir.actions.act_window">
+        <field name="name">Drop-offs</field>
+        <field name="res_model">car.rental.contract</field>
+        <field name="view_mode">kanban,list,calendar,form</field>
+        <field name="view_ids" eval="[Command.clear(),
+            Command.create({'view_mode': 'kanban', 'view_id': ref('car_rental_contract_dropoff_kanban')}),
+            Command.create({'view_mode': 'list', 'view_id': ref('car_rental_contract_dropoff_list')}),
+            Command.create({'view_mode': 'calendar', 'view_id': ref('car_rental_contract_pickup_calendar')}),
+            Command.create({'view_mode': 'form', 'view_id': ref('car_rental_contract_dropoff_form')})]"/>
+        <field name="search_view_id" ref="car_rental_contract_dropoff_search"/>
+        <field name="domain">[('state', '=', 'running')]</field>
+        <field name="context">{'search_default_dropoff_today': 1}</field>
+        <field name="groups_id" eval="[Command.set([ref('fleet_rental.fleet_car_rental_group_limited')])]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No drop-off here</p>
+            <p>Running rentals coming back appear here. Remove the "Today" filter to see the next ones.</p>
+        </field>
+    </record>
+
+    <!-- Menus: the staff see only these two under Rental Management. -->
+    <menuitem id="menu_car_rental_contract_pickup" parent="menu_car_parent" name="Pickups"
+              groups="fleet_rental.fleet_car_rental_group_limited"
+              action="action_car_rental_contract_pickup" sequence="2"/>
+    <menuitem id="menu_car_rental_contract_dropoff" parent="menu_car_parent" name="Drop-offs"
+              groups="fleet_rental.fleet_car_rental_group_limited"
+              action="action_car_rental_contract_dropoff" sequence="3"/>
 </odoo>

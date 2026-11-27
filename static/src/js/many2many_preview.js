@@ -13,7 +13,7 @@ export class FleetRentalAttachmentPreview extends Many2ManyBinaryField {
     }
 
     isImage(ext) {
-        return ['jpeg', 'jpg'].includes(ext);
+        return ['jpeg', 'jpg', 'png', 'gif', 'webp'].includes((ext || '').toLowerCase());
     }
 
 }
