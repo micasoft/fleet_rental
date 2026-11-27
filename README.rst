@@ -161,10 +161,11 @@ branch, not a bump.
   (or ``REF=v18.0.2.0.0``): one ``fleet_rental/`` folder, without the dev
   tooling (``.gitattributes``). Only committed code goes in.
 
-GitHub Actions (``.github/workflows/ci.yml``) run on every push and pull
-request to ``master``: they build the zip, run the test suite on its
-unzipped contents and keep it as a workflow artifact. A pushed tag must
-match the manifest version, and its zip is attached to a GitHub release.
+GitHub Actions (``.github/workflows/ci.yml``) run only when a release tag
+is pushed (``make release`` does it): they check the tag matches the
+manifest version, build the zip, run the test suite on its unzipped
+contents and attach the zip to a GitHub release. Pushes to ``master``
+run nothing: run ``make test-check`` before merging.
 
 To install the zip, unzip it into a folder of the server's addons path,
 then *Apps > Update Apps List* and install or upgrade *Fleet Rental
