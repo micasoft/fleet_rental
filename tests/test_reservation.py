@@ -29,9 +29,28 @@ class TestReservation(FleetRentalCommon, MockEmail):
         self.assertEqual(reservation.date_to, contract.rent_end_date)
 
     def test_confirm_assigns_number(self):
-        """Confirmed contracts of any company get a number from the shared sequence."""
+        """A confirmed contract gets a number from its company's sequence."""
         contract = self.confirm(self.make_contract())
         self.assertRegex(contract.name or '', r'^RENT/%d/\d{4}$' % contract.create_date.year)
+
+    def test_numbering_per_company(self):
+        """Each company numbers its contracts on its own sequence, from 1."""
+        Sequence = self.env['ir.sequence']
+        first = self.confirm(self.make_contract())
+        second = self.confirm(self.make_contract(rent_start_date='2026-03-10 10:00:00',
+                                                 rent_end_date='2026-03-12 10:00:00'))
+        self.assertEqual(int(second.name[-4:]), int(first.name[-4:]) + 1)
+        own = Sequence.search([('code', '=', 'car.rental.sequence'),
+                               ('company_id', '=', self.company.id)])
+        self.assertEqual(len(own), 1)
+        self.assertFalse(Sequence.search([('code', '=', 'car.rental.sequence'),
+                                          ('company_id', '=', False)]))
+        company2 = self.setup_other_company()['company']
+        other = self.env['car.rental.contract']._company_sequence(company2)
+        self.assertEqual(other.company_id, company2)
+        self.assertNotEqual(other, own)
+        self.assertEqual(other.with_context(ir_sequence_date='2026-03-01').next_by_id(),
+                         'RENT/2026/0001')
 
     def test_overlap_refused(self):
         self.confirm(self.make_contract())
@@ -46,12 +65,21 @@ class TestReservation(FleetRentalCommon, MockEmail):
                                                 rent_end_date='2026-03-08 10:00:00'))
         self.assertEqual(other.state, 'reserved')
 
-    def test_same_time_handover_allowed(self):
-        """Returned at 10:00, next customer picks up at 10:00: no overlap."""
+    def test_same_time_handover_refused(self):
+        """Prices are per day: returned at 10:00, picked up at 10:00 the same day is refused."""
         self.confirm(self.make_contract())
-        other = self.confirm(self.make_contract(rent_start_date='2026-03-05 10:00:00',
-                                                rent_end_date='2026-03-07 10:00:00'))
-        self.assertEqual(other.state, 'reserved')
+        other = self.make_contract(rent_start_date='2026-03-05 10:00:00',
+                                   rent_end_date='2026-03-07 10:00:00')
+        with self.assertRaises(UserError):
+            other.action_confirm()
+
+    def test_same_day_handover_refused(self):
+        """The return day belongs to the contract: a pickup later that day is refused."""
+        self.confirm(self.make_contract())
+        other = self.make_contract(rent_start_date='2026-03-05 18:00:00',
+                                   rent_end_date='2026-03-07 10:00:00')
+        with self.assertRaises(UserError):
+            other.action_confirm()
 
     def test_number_kept_after_back_to_quote(self):
         """Back to Quote and confirmed again keeps the contract number."""

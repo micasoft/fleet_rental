@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+<!--    The main company's contract sequence; other companies get their own on
+        their first contract (car.rental.contract._company_sequence).-->
     <data noupdate="1">
         <record id="sequence_car_rental" model="ir.sequence">
             <field name="name">Car Rental Sequence</field>
@@ -9,8 +11,6 @@
             <field eval="1" name="number_increment"/>
             <field eval="True" name="use_date_range"/>
             <field name="padding">4</field>
-            <!-- shared by all companies: one numbering for every contract -->
-            <field name="company_id" eval="False"/>
         </record>
     </data>
 <!--    Creating fleet rental service product-->

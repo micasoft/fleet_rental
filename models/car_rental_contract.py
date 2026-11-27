@@ -37,6 +37,7 @@ from .res_config_settings import DEFAULT_TOLERANCE_DELAY
 _logger = logging.getLogger(__name__)
 
 QUOTE_NAME = "Quote Contract"  # name of a contract until it gets its number
+SEQUENCE_CODE = "car.rental.sequence"
 
 STATES = [
     ('draft', 'Quote'),
@@ -413,12 +414,15 @@ class CarRentalContract(models.Model):
     # -- availability -----------------------------------------------------------------------
 
     def _check_availability(self):
-        """Refuse a period that overlaps another reservation of the vehicle.
-        A return and the next pick-up at the same time do not overlap."""
+        """Refuse a period that shares a day with another reservation of the
+        vehicle. Prices are per day, so the return day is not free for another
+        pick-up, whatever the hour."""
+        day = self._local_date
         for contract in self:
+            start, end = day(contract.rent_start_date), day(contract.rent_end_date)
             others = contract.vehicle_id.rental_reserved_time - contract.reserved_fleet_id
-            if any(other.date_from < contract.rent_end_date
-                   and other.date_to > contract.rent_start_date for other in others):
+            if any(day(other.date_from) <= end and day(other.date_to) >= start
+                   for other in others):
                 raise UserError(_("Sorry, this vehicle is already booked by another customer."))
 
     def _release_vehicle(self):
@@ -459,9 +463,28 @@ class CarRentalContract(models.Model):
 
     def _next_number(self):
         self.ensure_one()
-        return self.env['ir.sequence'].with_company(self.company_id).with_context(
+        return self._company_sequence(self.company_id).with_context(
             ir_sequence_date=fields.Date.to_string(self.create_date)
-        ).next_by_code('car.rental.sequence')
+        ).next_by_id()
+
+    @api.model
+    def _company_sequence(self, company):
+        """The company's contract sequence: each company numbers on its own.
+        One is created, like the module's, the first time a company needs it."""
+        Sequence = self.env['ir.sequence'].sudo()
+        sequence = Sequence.search([('code', '=', SEQUENCE_CODE),
+                                    ('company_id', '=', company.id)], limit=1)
+        if not sequence:
+            template = self.env.ref('fleet_rental.sequence_car_rental', raise_if_not_found=False)
+            sequence = Sequence.create({
+                'name': template.name if template else "Car Rental Sequence",
+                'code': SEQUENCE_CODE,
+                'prefix': template.prefix if template else "RENT/%(range_year)s/",
+                'padding': template.padding if template else 4,
+                'use_date_range': template.use_date_range if template else True,
+                'company_id': company.id,
+            })
+        return sequence
 
     def action_move_to_quote(self):
         self._check_manage_rights()
