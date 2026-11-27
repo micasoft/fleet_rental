@@ -80,6 +80,13 @@ class TestPricing(FleetRentalCommon):
         self.assertEqual(form.car_cost_per_day, 0)
         self.assertEqual(form.rent_cost, 0)
 
+    def test_manual_cost_per_day_reprices_rent(self):
+        """Typing another daily price recalculates the rent."""
+        form = self.contract_form('2026-03-02 10:00', '2026-03-05 10:00', vehicle=self.priced)
+        self.assertEqual(form.rent_cost, 150)
+        form.car_cost_per_day = 45
+        self.assertEqual(form.rent_cost, 135)
+
     def test_tools_quantities_and_totals(self):
         form = self.contract_form('2026-03-02 10:00', '2026-03-05 10:00')
         for tool in (self.tool_once, self.tool_daily):

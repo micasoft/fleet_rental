@@ -316,6 +316,11 @@ class CarRentalContract(models.Model):
     def _onchange_price(self):
         self._apply_band_price()
 
+    @api.onchange('car_cost_per_day')
+    def _onchange_car_cost_per_day(self):
+        for contract in self:
+            contract.rent_cost = contract.car_cost_per_day * max(contract.contract_days, 0)
+
     @api.onchange('line_tools')
     def _onchange_line_tools(self):
         self._update_tool_quantities()
