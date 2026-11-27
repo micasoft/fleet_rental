@@ -522,6 +522,42 @@ class CarRentalContract(models.Model):
         self._check_manage_rights()
         self.state = 'running'
 
+    def action_complete_pickup(self):
+        """The staff hand the car over: the rental starts."""
+        return self._complete_handover(
+            'reserved', 'running', _("Pickup completed by %s"),
+            lambda c: [
+                _("the km at pickup") if c.meters_pickup_value <= 0 else None,
+                _("the customer signature") if not c.signature_pickup else None,
+            ])
+
+    def action_complete_dropoff(self):
+        """The car is back: the contract waits for the back office's check."""
+        return self._complete_handover(
+            'running', 'checking', _("Drop-off completed by %s"),
+            lambda c: [
+                _("the km at drop-off (at least %s)", c.meters_pickup_value)
+                if c.meters_dropoff_value <= 0 or c.meters_dropoff_value < c.meters_pickup_value
+                else None,
+            ])
+
+    def _complete_handover(self, from_state, to_state, message, missing):
+        """Move contracts from `from_state` to `to_state` once nothing is
+        `missing`. Pickup/Dropoff users may do it on the contracts they can
+        write; the state itself is not a pickup field, hence the sudo."""
+        self.check_access('write')
+        for contract in self:
+            if contract.state != from_state:
+                raise UserError(_("%(contract)s is not %(state)s.", contract=contract.name,
+                                  state=dict(STATES)[from_state]))
+            todo = [item for item in missing(contract) if item]
+            if todo:
+                raise UserError(_("Please fill in %s first.", ", ".join(todo)))
+            contract.sudo().write({'state': to_state})
+            contract.sudo().message_post(body=message % self.env.user.name,
+                                         author_id=self.env.user.partner_id.id)
+        return True
+
     def force_checking(self):
         self._check_manage_rights()
         self.state = 'checking'
