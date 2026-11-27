@@ -152,8 +152,11 @@ branch, not a bump.
 - ``make release`` (on ``master``, no uncommitted changes) runs
   ``make test-check``, bumps the version (``BUMP=patch`` by default, or
   ``minor``/``major``), commits ``Release <version>`` and tags it. The first
-  release, with no tag yet, keeps the manifest's version. Nothing is
-  pushed: ``git push origin master v<version>`` publishes it.
+  release, with no tag yet, keeps the manifest's version. Then it pushes
+  ``master`` and the tag together, which publishes the release on GitHub.
+  ``master`` must match ``origin/master`` first. ``NO_PUSH=1`` keeps the
+  commit and tag local (``git push --atomic origin master v<version>``
+  publishes them later).
 - ``make package`` builds ``dist/fleet_rental-<version>.zip`` from ``HEAD``
   (or ``REF=v18.0.2.0.0``): one ``fleet_rental/`` folder, without the dev
   tooling (``.gitattributes``). Only committed code goes in.

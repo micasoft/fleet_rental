@@ -1,10 +1,11 @@
 #!/bin/bash
-# `make release [BUMP=patch|minor|major] [SKIP_TESTS=1]`: cut a release on master.
+# `make release [BUMP=patch|minor|major] [SKIP_TESTS=1] [NO_PUSH=1]`: cut a release on master.
 #
 # The first release (no v18.0.* tag yet) is the manifest's version as it is;
 # later ones bump it (patch by default). Runs `make test-check`, writes the
 # version into __manifest__.py, commits "Release 18.0.x.y.z" and tags v18.0.x.y.z.
-# Pushes nothing: pushing the tag makes GitHub build and publish the zip.
+# Then pushes the branch and the tag together; the tag makes GitHub build
+# and publish the zip. NO_PUSH=1 keeps both local.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,6 +15,11 @@ die() { echo "release: $*" >&2; exit 1; }
 
 [ "$(git branch --show-current)" = "$BRANCH" ] || die "releases are cut on $BRANCH (RELEASE_BRANCH=... to override)"
 [ -z "$(git status --porcelain --untracked-files=no)" ] || die "commit or stash your changes first"
+if [ -z "${NO_PUSH:-}" ]; then
+    git fetch -q origin "$BRANCH" || die "cannot reach origin"
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$BRANCH")" ] \
+        || die "$BRANCH differs from origin/$BRANCH: pull or push first"
+fi
 
 last=$(git tag -l 'v18.0.*' --sort=-v:refname | head -1)
 current=$(dev/version)
@@ -35,4 +41,10 @@ if [ "$new" != "$current" ]; then
 fi
 git commit --allow-empty -q -m "Release $new"
 git tag -a "v$new" -m "Release $new"
-echo ">> tagged v$new. Publish it with: git push origin $BRANCH v$new" >&2
+if [ -n "${NO_PUSH:-}" ]; then
+    echo ">> tagged v$new (not pushed). Publish it with: git push --atomic origin $BRANCH v$new" >&2
+    exit 0
+fi
+git push --atomic origin "$BRANCH" "v$new" \
+    || die "push failed: v$new is tagged locally; retry with: git push --atomic origin $BRANCH v$new"
+echo ">> pushed $BRANCH and v$new: GitHub Actions builds the zip and publishes the release" >&2

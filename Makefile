@@ -22,7 +22,7 @@ help:
 	@echo "test-check  like test, but passes only if the failures are exactly the known bugs (Bug: tests)"
 	@echo "version     print the module version (__manifest__.py)"
 	@echo "package     build dist/$(MODULE)-<version>.zip from committed code [REF=HEAD]"
-	@echo "release     on master: test, bump, commit and tag v<version> [BUMP=patch|minor|major] [SKIP_TESTS=1]"
+	@echo "release     on master: test, bump, commit, tag and push v<version> [BUMP=patch|minor|major] [SKIP_TESTS=1] [NO_PUSH=1]"
 
 check-env:
 	@test -f .env || { echo "missing .env: copy .env.example to .env and fill it in" >&2; exit 1; }
@@ -66,7 +66,7 @@ test:
 test-check:
 	@TAGS='$(TAGS)' KEEP='$(KEEP)' CHECK=1 ./dev/run-tests
 
-# Releases (README.rst "Releases"). Nothing is pushed.
+# Releases (README.rst "Releases").
 version:
 	@./dev/version
 
@@ -74,4 +74,4 @@ package:
 	@REF='$(or $(REF),HEAD)' ./dev/package
 
 release:
-	@BUMP='$(or $(BUMP),patch)' SKIP_TESTS='$(SKIP_TESTS)' ./dev/release
+	@BUMP='$(or $(BUMP),patch)' SKIP_TESTS='$(SKIP_TESTS)' NO_PUSH='$(NO_PUSH)' ./dev/release
