@@ -96,7 +96,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         contract = self.reserved()
         with freeze_time('2026-03-01 12:00:00'), self.mock_mail_gateway():
             self.cron_model().next_event()
-        mails = self.mails_with_subject('Next events for %s!' % contract.name)
+        mails = self.mails_with_subject('Pickup tomorrow: %s' % contract.name)
         self.assertEqual(len(mails), 1)
         self.assertIn(contract.handle_pickup, mails.recipient_ids)
 
@@ -105,7 +105,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
         contract.action_run()
         with freeze_time('2026-03-04 12:00:00'), self.mock_mail_gateway():
             self.cron_model().next_event()
-        mails = self.mails_with_subject('Next events for %s!' % contract.name)
+        mails = self.mails_with_subject('Drop-off tomorrow: %s' % contract.name)
         self.assertEqual(len(mails), 1)
         self.assertIn(contract.handle_dropoff, mails.recipient_ids)
 
@@ -115,7 +115,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 23:15:00'), self.mock_mail_gateway():
             self.cron_model().next_event()
-        self.assertEqual(len(self.mails_with_subject('Next events for %s!' % contract.name)), 1)
+        self.assertEqual(len(self.mails_with_subject('Pickup tomorrow: %s' % contract.name)), 1)
 
     def test_next_event_local_start_date(self):
         """On 14 July a pickup at 00:30 local on 15 July (23:30 UTC on 14 July) is tomorrow."""
@@ -123,7 +123,7 @@ class TestLifecycle(FleetRentalCommon, MockEmail):
                                  rent_end_date='2026-07-18 08:00:00')
         with freeze_time('2026-07-14 12:00:00'), self.mock_mail_gateway():
             self.cron_model().next_event()
-        self.assertEqual(len(self.mails_with_subject('Next events for %s!' % contract.name)), 1)
+        self.assertEqual(len(self.mails_with_subject('Pickup tomorrow: %s' % contract.name)), 1)
 
     def test_next_event_changes_no_state(self):
         contract = self.reserved()

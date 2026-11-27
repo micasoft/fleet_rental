@@ -107,21 +107,21 @@ class TestReservation(FleetRentalCommon, MockEmail):
         self.set_param('fleet_rental_send_booking', True)
         with self.mock_mail_gateway():
             self.confirm(self.make_contract())
-        mails = self.mails_with_subject('Reservation for')
+        mails = self.mails_with_subject('Reservation RENT/')
         self.assertEqual(len(mails), 1)
         self.assertIn(self.customer, mails.recipient_ids)
 
     def test_no_booking_mail_when_disabled(self):
         with self.mock_mail_gateway():
             self.confirm(self.make_contract())
-        self.assertFalse(self.mails_with_subject('Reservation for'))
+        self.assertFalse(self.mails_with_subject('Reservation RENT/'))
 
     def test_send_quote(self):
         contract = self.make_contract()
         with self.mock_mail_gateway():
             contract.action_send_quote()
         self.assertTrue(contract.sent_quote)
-        self.assertEqual(len(self.mails_with_subject('Renting quote for')), 1)
+        self.assertEqual(len(self.mails_with_subject('Rental quote for')), 1)
 
     def test_send_quote_vehicle_booked(self):
         self.confirm(self.make_contract())
